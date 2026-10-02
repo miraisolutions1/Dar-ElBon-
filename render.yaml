@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: dar-elbon
+    runtime: node
+    plan: starter
+    branch: main
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: node scripts/start-render.mjs
+    healthCheckPath: /api/health
+    autoDeploy: false
+    numInstances: 1
+    disk:
+      name: dar-coffee-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATA_DIR
+        value: /var/data/dar-coffee
+      - key: TRUST_PROXY
+        value: '1'
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false

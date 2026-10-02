@@ -1,0 +1,9 @@
+node_modules
+dist
+data
+.local
+.cache
+package-lock.json
+public/images
+test-results
+playwright-report
