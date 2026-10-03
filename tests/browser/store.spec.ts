@@ -8,7 +8,7 @@ test('desktop purchase persists, appears in admin, and follows fulfillment updat
   page.on('pageerror', (e) => errors.push(e.message));
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: /قهوتك،/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /قهوتك،/, level: 1 })).toBeVisible();
   await page.screenshot({ path: '.local/screenshots/home-desktop.png', fullPage: true });
   await page.getByRole('link', { name: 'اختار قهوتك', exact: true }).click();
   await page.getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي' }).click();
@@ -49,7 +49,7 @@ test('mobile browsing, filters and cart remain usable without horizontal overflo
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.evaluate(() => document.fonts.ready);
-  await expect(page.getByRole('heading', { name: /قهوتك،/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /قهوتك،/, level: 1 })).toBeVisible();
   const checkOverflow = async () =>
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,

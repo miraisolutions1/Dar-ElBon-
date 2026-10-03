@@ -24,3 +24,13 @@ Browser tests use an isolated temporary database and synthetic accounts/orders. 
 The Render startup command was executed against an isolated temporary database with `RENDER_EXTERNAL_URL` as the HTTPS origin. Login, Secure/HttpOnly/SameSite cookies, a preview order, image upload, cross-origin rejection, graceful restart, and retention of the account, order and image all passed. The local private credential file remained unchanged. The first ad hoc smoke attempt used the wrong upload URL and returned 404; correcting the check to the existing `/api/admin/upload` route produced the passing result. This validates the startup command locally; no Render account, remote disk, or public URL has been provisioned or verified.
 
 The initial store remains in preview mode. Product prices, weights, inventory, shipping policies, contact information and generated media require business review before actual sales. Payment-provider, shipping-provider and messaging integrations have not been implemented or claimed as tested.
+
+## Visual revision — 3 October 2026
+
+Rebuilt the storefront around the supplied brown-and-cream cafe reference: an enclosing rounded frame, curved hero, coffee photography, image-led browsing cards, Naskh headings, and expandable product-selection guidance. Product, checkout, and admin behavior continues to use the existing server. Drink imagery links to browsing or the guide; it does not invent additional catalog products.
+
+- Production build and TypeScript passed.
+- All 3 existing Chromium end-to-end tests passed, including checkout, fulfillment, product/content editing and mobile navigation. The homepage assertion now selects the level-one heading because the new section title also contains the same phrase.
+- Browser checks at 320, 390, 768, 1024 and 1440 pixels found no document-level horizontal overflow. Desktop and mobile screenshots were visually inspected.
+- The updated standalone HTML preview was checked through an internal HTTP server, then with browser networking disabled. Accordion, product/weight selection and cart navigation passed with no external requests or browser errors. That artifact deliberately does not submit orders; its admin view is a labeled screenshot. Direct file-URL execution cannot be verified in the managed browser, which blocks that scheme.
+- These checks do not establish a public deployment or owner approval of the visual revision.

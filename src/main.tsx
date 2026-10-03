@@ -2,7 +2,9 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import '@fontsource-variable/noto-sans-arabic';
+import '@fontsource-variable/noto-naskh-arabic';
 import './styles.css';
+import './storefront-theme.css';
 import { StoreProvider, CartProvider } from './lib';
 import {
   StoreLayout,
