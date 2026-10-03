@@ -54,7 +54,17 @@ export const settingsSchema = z
     returnsPolicy: z.string().trim().max(8000),
     privacyPolicy: z.string().trim().max(8000),
     codEnabled: z.boolean(),
-    sections: z.array(z.enum(['brewing', 'featured', 'story', 'guide'])).max(4),
+    sections: z.array(z.enum(['brewing', 'featured', 'story', 'branches', 'guide'])).max(5),
+    branches: z
+      .array(
+        z.object({
+          name: z.string().trim().min(1).max(80),
+          address: z.string().trim().min(1).max(300),
+          main: z.boolean(),
+        }),
+      )
+      .max(12)
+      .optional(),
     shippingZones: z
       .array(
         z.object({

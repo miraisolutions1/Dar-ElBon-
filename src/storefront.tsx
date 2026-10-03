@@ -30,6 +30,7 @@ import {
   Plus,
   Facebook,
   Instagram,
+  MapPin,
 } from 'lucide-react';
 import {
   Brand,
@@ -78,6 +79,41 @@ function SocialLinks() {
         </a>
       ))}
     </div>
+  );
+}
+
+function Branches() {
+  const { settings } = useStore();
+  if (!settings.branches?.length) return null;
+  return (
+    <section className="container section branch-section" id="branches">
+      <SectionTitle eyebrow="نفس الحكاية، أقرب لك" title="فنجانك مستنيك في فروعنا" />
+      <p className="section-intro">
+        من ألف مسكن للعبور، اختار الفرع الأقرب وقابلنا على فنجان قهوة.
+      </p>
+      <div className="branch-grid">
+        {settings.branches.map((branch, index) => (
+          <article className="branch-card" key={index}>
+            <div className="branch-top">
+              <MapPin size={24} strokeWidth={1.4} />
+              <span>{branch.main ? 'الفرع الرئيسي' : 'دار البن البرازيلي'}</span>
+            </div>
+            <h3>{branch.name}</h3>
+            <p>{branch.address}</p>
+            <a
+              href={
+                'https://www.google.com/maps/search/?api=1&query=' +
+                encodeURIComponent('دار البن البرازيلي ' + branch.address)
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              ابحث على الخريطة <ArrowUpLeft size={16} />
+            </a>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -227,6 +263,7 @@ export function StoreLayout() {
               <h3>اكتشف دار البن</h3>
               <Link to="/shop">كل القهوة</Link>
               <Link to="/about">حكايتنا</Link>
+              <Link to="/about">فروعنا</Link>
               <Link to="/guide">دليل اختيار القهوة</Link>
             </div>
             <div>
@@ -271,6 +308,7 @@ export function Home() {
     .slice(0, 4);
   const coffeeSheet = '/images/brewing-methods.webp';
   const sections: Record<string, React.ReactNode> = {
+    branches: <Branches />,
     brewing: (
       <section className="container section coffee-selection">
         <SectionTitle eyebrow="لكل فنجان، طريقته" title="بتعمل قهوتك إزاي؟" />
@@ -1203,6 +1241,35 @@ export function About() {
         </div>
         <SocialLinks />
       </div>
+      <section className="section about-journey">
+        <SectionTitle eyebrow="من حبوب البن لفنجانك" title="كل خطوة جزء من الحكاية" />
+        <div className="coffee-notes">
+          {[
+            {
+              title: 'القطف والتجميع',
+              text: 'الحكاية بتبدأ من حبوب البن؛ قطفها وتجميعها أول خطوة في الرحلة.',
+            },
+            {
+              title: 'اختيار الحبوب',
+              text: 'اختيار الحبوب هو بداية الاهتمام بالتفاصيل، قبل ما تبدأ رحلة التحميص.',
+            },
+            {
+              title: 'التحميص والطحن',
+              text: 'من التحميص للطحن، لحد ما توصل التوليفة لفنجانك. كل تفصيلة لها دور في المذاق.',
+            },
+          ].map(({ title, text }, index) => (
+            <article className="coffee-note" key={title}>
+              <div className="note-top">
+                <Bean size={25} />
+                <span>0{index + 1}</span>
+              </div>
+              <h3>{title}</h3>
+              <p>{text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+      <Branches />
     </div>
   );
 }

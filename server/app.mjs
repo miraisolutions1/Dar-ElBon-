@@ -231,6 +231,7 @@ export function createApp({
   app.get('/api/admin/settings', (_req, res) => res.json(getSettings(db)));
   app.put('/api/admin/settings', owner, (req, res) => {
     const settings = parse(settingsSchema, req.body);
+    if (settings.branches === undefined) settings.branches = getSettings(db).branches;
     if (settings.mode === 'live') {
       const missing = launchChecks(db, settings).filter((c) => !c.ok);
       if (missing.length)

@@ -505,3 +505,45 @@ test('stale product edits cannot overwrite stock sales and checkout confirms the
     18,
   );
 });
+
+test('branch content persists, validates addresses and survives legacy settings saves', async (t) => {
+  const f = await fixture(t);
+  const settings = getSettings(f.db);
+  const branches = [{ name: 'فرع اختبار', address: 'عنوان معتمد للاختبار', main: true }];
+  const saved = await f.request('/admin/settings', {
+    method: 'PUT',
+    cookie: f.cookie,
+    body: { ...settings, branches },
+  });
+  assert.equal(saved.status, 200);
+  assert.deepEqual((await f.request('/store')).data.settings.branches, branches);
+  const legacy = { ...settings };
+  delete legacy.branches;
+  assert.equal(
+    (await f.request('/admin/settings', { method: 'PUT', cookie: f.cookie, body: legacy })).status,
+    200,
+  );
+  assert.deepEqual(getSettings(f.db).branches, branches);
+  assert.equal(
+    (
+      await f.request('/admin/settings', {
+        method: 'PUT',
+        cookie: f.cookie,
+        body: { ...settings, branches: [{ ...branches[0], address: '' }] },
+      })
+    ).status,
+    400,
+  );
+  assert.deepEqual(getSettings(f.db).branches, branches);
+  assert.equal(
+    (
+      await f.request('/admin/settings', {
+        method: 'PUT',
+        cookie: f.cookie,
+        body: { ...settings, branches: [] },
+      })
+    ).status,
+    200,
+  );
+  assert.deepEqual((await f.request('/store')).data.settings.branches, []);
+});

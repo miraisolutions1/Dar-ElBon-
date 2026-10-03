@@ -8,11 +8,11 @@ export const defaults = {
   mode: 'preview',
   heroTitle: 'الحكاية\nفي الفنجان.',
   heroSubtitle:
-    'من أول ريحة البن، لآخر رشفة… لحظة تخصّك. اختار توليفتك من دار البن، وخلي فنجانك يحكي على مزاجك.',
+    'من أول يوم لحد النهارده، القهوة هي القهوة… والحكاية لسه في الفنجان. اختار توليفتك، وخلي كل رشفة جزء من حكايتك.',
   heroImage: '/images/coffee-cinematic.webp',
-  storyTitle: 'مش مجرد قهوة.\nحكاية بتتشارك.',
+  storyTitle: 'سنين عدّت.\nوالحكاية لسه مكمّلة.',
   storyText:
-    'فنجان الصبح الهادي، وقعدة آخر اليوم، وضيف بتحبّه. القهوة حاضرة في حكاياتنا الصغيرة. في دار البن البرازيلي، بنخلّي اختيار توليفتك ووزنك وطحنتك أبسط، علشان تاخد وقتك في اللحظة اللي بتحبها.',
+    'من وقت ما بدأت الحكاية، ودار البن البرازيلي موجودة وسط تفاصيل الأيام، واللّمّة، والقهوة الحلوة. سنين عدّت، وأجيال اتغيّرت، لكن الحكاية لسه مكمّلة. تبدأ من قطْف حبوب البن وتجميعها واختيارها، ثم التحميص والطحن؛ تفاصيل بنهتم بيها علشان يوصل لك فنجان غني بالمذاق.',
   contactPhone: '',
   contactEmail: '',
   address: '',
@@ -20,7 +20,13 @@ export const defaults = {
   returnsPolicy: '',
   privacyPolicy: '',
   codEnabled: true,
-  sections: ['brewing', 'featured', 'story', 'guide'],
+  sections: ['brewing', 'featured', 'story', 'branches', 'guide'],
+  branches: [
+    { name: 'جسر السويس — ألف مسكن', address: 'شارع جسر السويس، ألف مسكن', main: true },
+    { name: 'مدينة نصر', address: 'شارع الطيران، بجوار كوك دور', main: false },
+    { name: 'المقطم', address: 'شارع ٩، داخل بنزينة شيل أوت، بجوار جمعية رسالة', main: false },
+    { name: 'العبور', address: 'المنطقة التاسعة، داخل مول أفينيو', main: false },
+  ],
   shippingZones: [
     { id: 'demo-zone', name: 'منطقة تجريبية', fee: 0, eta: 'للتجربة فقط', enabled: true },
   ],
@@ -103,7 +109,10 @@ export function transaction(db, fn) {
   }
 }
 export function getSettings(db) {
-  return JSON.parse(db.prepare('SELECT value FROM settings WHERE id=1').get().value);
+  return {
+    ...defaults,
+    ...JSON.parse(db.prepare('SELECT value FROM settings WHERE id=1').get().value),
+  };
 }
 export function getProduct(db, row) {
   if (!row) return null;

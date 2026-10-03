@@ -1125,6 +1125,7 @@ export function SettingsPage({ contentOnly = false }: { contentOnly?: boolean })
     brewing: 'اختيار طريقة التحضير',
     featured: 'المنتجات المميزة',
     story: 'حكاية دار البن',
+    branches: 'فروع دار البن',
     guide: 'مساعدة اختيار القهوة',
   };
   return (
@@ -1183,6 +1184,94 @@ export function SettingsPage({ contentOnly = false }: { contentOnly?: boolean })
                     maxLength={3000}
                   />
                 </label>
+              </section>
+              <section className="panel">
+                <div className="panel-heading">
+                  <h2>فروع دار البن</h2>
+                  <button
+                    className="btn secondary small"
+                    type="button"
+                    disabled={(s.branches || []).length >= 12}
+                    onClick={() =>
+                      patch('branches', [
+                        ...(s.branches || []),
+                        { name: '', address: '', main: false },
+                      ])
+                    }
+                  >
+                    <Plus size={15} />
+                    إضافة فرع
+                  </button>
+                </div>
+                <p className="tiny muted">
+                  العنوان يظهر للزوار، ورابط الخريطة يبحث عنه. أضف العناوين المعتمدة فقط.
+                </p>
+                {(s.branches || []).map((branch, index) => (
+                  <fieldset className="branch-editor" key={index}>
+                    <legend>الفرع {index + 1}</legend>
+                    <label className="field">
+                      اسم الفرع
+                      <input
+                        value={branch.name}
+                        maxLength={80}
+                        required
+                        onChange={(e) =>
+                          patch(
+                            'branches',
+                            s.branches.map((b, i) =>
+                              i === index ? { ...b, name: e.target.value } : b,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                    <label className="field">
+                      عنوان الفرع
+                      <textarea
+                        value={branch.address}
+                        maxLength={300}
+                        required
+                        onChange={(e) =>
+                          patch(
+                            'branches',
+                            s.branches.map((b, i) =>
+                              i === index ? { ...b, address: e.target.value } : b,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                    <label className="check-label">
+                      <input
+                        type="checkbox"
+                        checked={branch.main}
+                        onChange={(e) =>
+                          patch(
+                            'branches',
+                            s.branches.map((b, i) =>
+                              i === index ? { ...b, main: e.target.checked } : b,
+                            ),
+                          )
+                        }
+                      />
+                      الفرع الرئيسي
+                    </label>
+                    <button
+                      type="button"
+                      className="btn secondary small"
+                      aria-label={`حذف الفرع ${index + 1}`}
+                      onClick={() =>
+                        patch(
+                          'branches',
+                          s.branches.filter((_, i) => i !== index),
+                        )
+                      }
+                    >
+                      <Trash2 size={15} />
+                      حذف الفرع
+                    </button>
+                  </fieldset>
+                ))}
               </section>
             </div>
             <aside className="panel self-start">

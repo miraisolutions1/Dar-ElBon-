@@ -35,6 +35,7 @@ export type Settings = {
   privacyPolicy: string;
   codEnabled: boolean;
   sections: string[];
+  branches: { name: string; address: string; main: boolean }[];
   shippingZones: { id: string; name: string; fee: number; eta: string; enabled: boolean }[];
 };
 export type CartLine = { productId: string; variantId: string; grind: string; quantity: number };

@@ -1388,3 +1388,92 @@
     gap: 8px;
   }
 }
+.storefront .branch-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 28px;
+}
+.storefront .branch-card {
+  background: #fffdf8;
+  border: 1px solid #e6dac7;
+  border-radius: 10px;
+  padding: 25px 20px;
+  display: flex;
+  flex-direction: column;
+}
+.storefront .branch-top {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #a27b3e;
+  margin-bottom: 23px;
+}
+.storefront .branch-top span {
+  font-size: 10px;
+}
+.storefront .branch-card h3 {
+  font-size: 17px;
+  margin-bottom: 12px;
+}
+.storefront .branch-card p {
+  color: #75624f;
+  font-size: 12px;
+  line-height: 2;
+  margin-bottom: 24px;
+}
+.storefront .branch-card a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #805b2b;
+  border-top: 1px solid #eee3d2;
+  padding-top: 14px;
+  margin-top: auto;
+  min-height: 44px;
+}
+.storefront .page-space > .branch-section {
+  width: 100%;
+  padding-bottom: 0;
+}
+.branch-editor {
+  border: 1px solid #dfd7cc;
+  padding: 20px;
+  border-radius: 10px;
+  margin-top: 18px;
+}
+.branch-editor legend {
+  padding-inline: 8px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.branch-editor .check-label {
+  margin-block: 12px;
+}
+@media (max-width: 1100px) {
+  .storefront .branch-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .storefront .branch-grid {
+    gap: 12px;
+  }
+  .storefront .branch-card {
+    padding: 20px 15px;
+  }
+  .storefront .branch-card h3 {
+    font-size: 14px;
+  }
+  .storefront .branch-card p {
+    font-size: 11px;
+    margin-bottom: 16px;
+  }
+  .storefront .branch-top {
+    margin-bottom: 16px;
+  }
+  .storefront .branch-top span {
+    font-size: 8px;
+  }
+}

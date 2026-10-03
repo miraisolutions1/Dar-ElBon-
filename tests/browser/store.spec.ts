@@ -88,10 +88,15 @@ test('admin updates product pricing and content and mobile admin navigation work
   await expect(page).toHaveURL(/\/admin\/products$/);
   await page.getByRole('link', { name: 'محتوى الرئيسية', exact: true }).click();
   await page.getByLabel('العنوان الرئيسي').fill('قهوة على مزاجك، كل يوم.');
+  await page
+    .getByRole('textbox', { name: 'عنوان الفرع', exact: true })
+    .first()
+    .fill('عنوان الفرع من اختبار المتصفح');
   await page.getByRole('button', { name: 'حفظ التغييرات' }).click();
   await expect(page.getByText('تم حفظ الإعدادات وتحديث المتجر.')).toBeVisible();
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'قهوة على مزاجك، كل يوم.' })).toBeVisible();
+  await expect(page.getByText('عنوان الفرع من اختبار المتصفح', { exact: true })).toBeVisible();
   await page.goto('/products/dar-blend-mahawag');
   await expect(page.locator('.detail-price')).toContainText('١٩٩');
   await page.setViewportSize({ width: 390, height: 844 });
