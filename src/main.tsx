@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import '@fontsource-variable/noto-sans-arabic';
 import '@fontsource-variable/noto-naskh-arabic';
+import '@fontsource-variable/cairo';
 import './styles.css';
 import './storefront-theme.css';
 import { StoreProvider, CartProvider } from './lib';
@@ -16,6 +17,7 @@ import {
   OrderPage,
   Guide,
   About,
+  BranchesPage,
   Policy,
   NotFound,
 } from './storefront';
@@ -66,6 +68,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="order/:token" element={<OrderPage />} />
               <Route path="guide" element={<Guide />} />
               <Route path="about" element={<About />} />
+              <Route path="branches" element={<BranchesPage />} />
               <Route path="policies/:type" element={<Policy />} />
               <Route path="*" element={<NotFound />} />
             </Route>

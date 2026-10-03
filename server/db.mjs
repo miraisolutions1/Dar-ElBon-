@@ -1,3 +1,4 @@
+import copy from '../content/site-copy-ar.json' with { type: 'json' };
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -6,13 +7,11 @@ import { randomUUID } from 'node:crypto';
 export const defaults = {
   brand: 'دار البن البرازيلي',
   mode: 'preview',
-  heroTitle: 'الحكاية\nفي الفنجان.',
-  heroSubtitle:
-    'من أول يوم لحد النهارده، القهوة هي القهوة… والحكاية لسه في الفنجان. اختار توليفتك، وخلي كل رشفة جزء من حكايتك.',
+  heroTitle: copy.hero.title,
+  heroSubtitle: copy.hero.subtitle,
   heroImage: '/images/coffee-cinematic.webp',
-  storyTitle: 'سنين عدّت.\nوالحكاية لسه مكمّلة.',
-  storyText:
-    'من وقت ما بدأت الحكاية، ودار البن البرازيلي موجودة وسط تفاصيل الأيام، واللّمّة، والقهوة الحلوة. سنين عدّت، وأجيال اتغيّرت، لكن الحكاية لسه مكمّلة. تبدأ من قطْف حبوب البن وتجميعها واختيارها، ثم التحميص والطحن؛ تفاصيل بنهتم بيها علشان يوصل لك فنجان غني بالمذاق.',
+  storyTitle: copy.story.title,
+  storyText: copy.story.shortText,
   contactPhone: '',
   contactEmail: '',
   address: '',
@@ -77,7 +76,7 @@ export function openDatabase(directory = process.env.DATA_DIR || './data') {
       id,
       'dar-blend-mahawag',
       'توليفة دار البن البرازيلي',
-      'توليفة محوج من دار البن البرازيلي. اختر الوزن والطحنة المناسبة لطريقتك. بيانات الوزن والسعر الحالية مخصصة لتجربة المتجر وتحتاج اعتماد الإدارة قبل البيع.',
+      copy.product.description + ' ' + copy.product.demoNotice,
       'وسط',
       JSON.stringify(['تركي']),
       'محوج',

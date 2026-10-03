@@ -10,8 +10,9 @@ test('desktop purchase persists, appears in admin, and follows fulfillment updat
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /الحكاية/, level: 1 })).toBeVisible();
   await page.screenshot({ path: '.local/screenshots/home-desktop.png', fullPage: true });
-  await page.getByRole('link', { name: 'اختار قهوتك', exact: true }).click();
-  await page.getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي' }).click();
+  await page.getByRole('link', { name: 'اختار بنّك', exact: true }).click();
+  await expect(page).toHaveURL(/\/shop$/);
+  await page.getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي', exact: true }).click();
   await page.getByRole('button', { name: 'أضف للسلة', exact: true }).click();
   await page.getByRole('link', { name: /راجع السلة/ }).click();
   await page.reload();
@@ -57,11 +58,11 @@ test('mobile browsing, filters and cart remain usable without horizontal overflo
   await checkOverflow();
   await page.screenshot({ path: '.local/screenshots/home-mobile.png', fullPage: true });
   await page.getByRole('button', { name: 'فتح القائمة' }).click();
-  await page.getByRole('link', { name: 'قهوتنا', exact: true }).click();
+  await page.getByRole('link', { name: 'بنّك للبيت', exact: true }).click();
   await page.getByLabel('طريقة التحضير', { exact: true }).selectOption('فلتر');
   await expect(page.getByRole('heading', { name: 'لسه ما لقيناش التوليفة دي' })).toBeVisible();
   await page.getByRole('button', { name: 'عرض كل القهوة' }).click();
-  await page.getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي' }).click();
+  await page.getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي', exact: true }).click();
   await page.getByRole('button', { name: '500 جم', exact: true }).click();
   await page.getByLabel('الطحنة المناسبة').selectOption('حبوب كاملة');
   await page.getByRole('button', { name: 'أضف للسلة', exact: true }).click();
@@ -135,7 +136,9 @@ test('header search and mobile navigation keep the active panel consistent', asy
   await page.getByLabel('ابحث عن قهوتك').fill('محوج');
   await page.getByRole('button', { name: 'بحث', exact: true }).click();
   await expect(page).toHaveURL(/shop\?q=/);
-  await expect(page.getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي' })).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي', exact: true }),
+  ).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'فتح القائمة' }).click();
   await expect(page.getByRole('navigation', { name: 'القائمة الرئيسية' })).toBeVisible();
@@ -150,4 +153,26 @@ test('header search and mobile navigation keep the active panel consistent', asy
     'aria-expanded',
     'false',
   );
+});
+
+test('home separates branch visits from buying beans and explains methods without stock', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByRole('link', { name: 'اعرف فروعنا', exact: true }).click();
+  await expect(page).toHaveURL(/\/branches$/);
+  await expect(page.locator('.branch-card')).toHaveCount(4);
+  await page.goto('/');
+  await page
+    .locator('.brew-card')
+    .filter({ has: page.getByRole('heading', { name: 'إسبريسو', exact: true }) })
+    .click();
+  await expect(page).toHaveURL(/\/guide\?brew=/);
+  await expect(page.getByRole('button', { name: 'إسبريسو', exact: true })).toHaveClass(/selected/);
+  await expect(page.getByRole('heading', { name: 'فنجان إسبريسو على طريقتك' })).toBeVisible();
+  await page.getByRole('link', { name: 'شوف البن المتاح', exact: true }).click();
+  await expect(
+    page.getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي', exact: true }),
+  ).toBeVisible();
 });

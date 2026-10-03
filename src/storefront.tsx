@@ -1,3 +1,4 @@
+import copy from '../content/site-copy-ar.json';
 import { useState, useEffect, type FormEvent } from 'react';
 import {
   Link,
@@ -87,9 +88,11 @@ function Branches() {
   if (!settings.branches?.length) return null;
   return (
     <section className="container section branch-section" id="branches">
-      <SectionTitle eyebrow="نفس الحكاية، أقرب لك" title="فنجانك مستنيك في فروعنا" />
+      <SectionTitle eyebrow={copy.branches.eyebrow} title={copy.branches.title} />
       <p className="section-intro">
-        من ألف مسكن للعبور، اختار الفرع الأقرب وقابلنا على فنجان قهوة.
+        {settings.branches.length === 4
+          ? copy.branches.intro
+          : 'اختار الفرع الأقرب لك، والحكاية تكمل مع كل فنجان.'}
       </p>
       <div className="branch-grid">
         {settings.branches.map((branch, index) => (
@@ -108,7 +111,7 @@ function Branches() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              ابحث على الخريطة <ArrowUpLeft size={16} />
+              {copy.branches.mapCta} <ArrowUpLeft size={16} />
             </a>
           </article>
         ))}
@@ -153,7 +156,7 @@ export function StoreLayout() {
             <Link to="/" aria-label="دار البن — الرئيسية">
               <Brand />
             </Link>
-            <p className="header-note">توليفة تحكي، وفنجان يجمع.</p>
+            <p className="header-note">{copy.brand.headerNote}</p>
             <div className="header-actions">
               <Link className="header-guide" to="/guide">
                 دليل اختيار القهوة <ArrowLeft size={15} />
@@ -203,8 +206,9 @@ export function StoreLayout() {
                 <NavLink to="/" end>
                   الرئيسية
                 </NavLink>
-                <NavLink to="/shop">قهوتنا</NavLink>
+                <NavLink to="/shop">{copy.navigation.shop}</NavLink>
                 <NavLink to="/about">حكاية دار البن</NavLink>
+                <NavLink to="/branches">فروعنا</NavLink>
                 <NavLink to="/guide">ساعدني أختار</NavLink>
               </nav>
               <form
@@ -218,7 +222,11 @@ export function StoreLayout() {
                   );
                 }}
               >
-                <input name="q" aria-label="ابحث عن قهوتك" placeholder="ابحث عن توليفتك المفضلة…" />
+                <input
+                  name="q"
+                  aria-label="ابحث عن قهوتك"
+                  placeholder={copy.navigation.searchPlaceholder}
+                />
                 <button aria-label="بحث" type="submit">
                   <Search size={19} />
                 </button>
@@ -238,7 +246,12 @@ export function StoreLayout() {
                 setSearch(false);
               }}
             >
-              <input name="q" autoFocus placeholder="بتدور على قهوة إيه؟" aria-label="كلمة البحث" />
+              <input
+                name="q"
+                autoFocus
+                placeholder={copy.navigation.searchPlaceholder}
+                aria-label="كلمة البحث"
+              />
               <button className="btn small">بحث</button>
             </form>
           )}
@@ -252,18 +265,14 @@ export function StoreLayout() {
               <Link to="/">
                 <Brand />
               </Link>
-              <p>
-                الحكاية في الفنجان.
-                <br />
-                ولكل يوم، فنجان يستاهل.
-              </p>
+              <p className="footer-story">{copy.brand.footerText}</p>
               <SocialLinks />
             </div>
             <div>
               <h3>اكتشف دار البن</h3>
               <Link to="/shop">كل القهوة</Link>
               <Link to="/about">حكايتنا</Link>
-              <Link to="/about">فروعنا</Link>
+              <Link to="/branches">فروعنا</Link>
               <Link to="/guide">دليل اختيار القهوة</Link>
             </div>
             <div>
@@ -311,38 +320,41 @@ export function Home() {
     branches: <Branches />,
     brewing: (
       <section className="container section coffee-selection">
-        <SectionTitle eyebrow="لكل فنجان، طريقته" title="بتعمل قهوتك إزاي؟" />
+        <SectionTitle eyebrow={copy.brewing.eyebrow} title={copy.brewing.title} />
         <div className="brew-grid">
-          {[
-            { name: 'تركي', description: 'للفنجان الصغير، والمزاج الكبير.', position: '100%' },
-            { name: 'إسبريسو', description: 'للقهوة المركّزة، على طريقتك.', position: '50%' },
-            { name: 'فلتر', description: 'خد وقتك، واستمتع بالتفاصيل.', position: '0%' },
-          ].map(({ name, description, position }) => (
-            <Link key={name} to={`/shop?brew=${encodeURIComponent(name)}`} className="brew-card">
-              <div
-                className="brew-photo"
-                role="img"
-                aria-label={`طريقة تحضير ${name}`}
-                style={{ backgroundImage: `url(${coffeeSheet})`, backgroundPositionX: position }}
-              />
-              <div className="brew-caption">
-                <h3>{name}</h3>
-                <p>{description}</p>
-                <span className="brew-arrow" aria-hidden="true">
-                  <ArrowLeft size={17} />
-                </span>
-              </div>
-            </Link>
-          ))}
+          {copy.brewing.items
+            .map((item, index) => ({ ...item, position: ['100%', '50%', '0%'][index] }))
+            .map(({ name, description, position }) => (
+              <Link
+                key={name}
+                to={`${products.some((p) => p.brew.includes(name)) ? '/shop' : '/guide'}?brew=${encodeURIComponent(name)}`}
+                className="brew-card"
+              >
+                <div
+                  className="brew-photo"
+                  role="img"
+                  aria-label={`طريقة تحضير ${name}`}
+                  style={{ backgroundImage: `url(${coffeeSheet})`, backgroundPositionX: position }}
+                />
+                <div className="brew-caption">
+                  <h3>{name}</h3>
+                  <p>{description}</p>
+                  <small className="brew-route-label">
+                    {products.some((p) => p.brew.includes(name)) ? 'تسوق البن' : 'اعرف الطريقة'}
+                  </small>
+                  <span className="brew-arrow" aria-hidden="true">
+                    <ArrowLeft size={17} />
+                  </span>
+                </div>
+              </Link>
+            ))}
         </div>
       </section>
     ),
     featured: (
       <section className="container section home-featured">
-        <SectionTitle eyebrow="فنجانك اليومي يبدأ هنا" title="توليفتك، بالمقدار اللي يناسبك" />
-        <p className="section-intro">
-          نفس التوليفة اللي بتحبها، بوزنك وطحنتك. اختار العبوة وكمّل تفاصيل فنجانك.
-        </p>
+        <SectionTitle eyebrow={copy.featured.eyebrow} title={copy.featured.title} />
+        <p className="section-intro">{copy.featured.intro}</p>
         {choices.length ? (
           <div className={`featured-grid ${choices.length <= 2 ? 'pair' : ''}`}>
             {choices.map(({ product, variant }) => (
@@ -354,7 +366,7 @@ export function Home() {
         )}
         <div className="section-action">
           <Link className="text-link" to="/shop">
-            تصفّح كل القهوة <ArrowLeft size={17} />
+            {copy.featured.allCta} <ArrowLeft size={17} />
           </Link>
         </div>
       </section>
@@ -369,11 +381,11 @@ export function Home() {
             loading="lazy"
           />
           <div className="story-copy">
-            <span className="eyebrow">أهلًا بك في دار البن</span>
+            <span className="eyebrow">{copy.story.eyebrow}</span>
             <h2>{settings.storyTitle}</h2>
             <p>{settings.storyText}</p>
             <Link className="btn story-button" to="/about">
-              اعرف الحكاية <ArrowLeft size={17} />
+              {copy.story.cta} <ArrowLeft size={17} />
             </Link>
           </div>
         </div>
@@ -381,37 +393,26 @@ export function Home() {
     ),
     guide: (
       <section className="container section home-guide">
-        <SectionTitle eyebrow="تفاصيل صغيرة، فرق في الفنجان" title="خلي كل فنجان على مزاجك" />
+        <SectionTitle eyebrow={copy.guide.eyebrow} title={copy.guide.tipsTitle} />
         <div className="coffee-notes">
-          {[
-            {
-              number: '01',
-              title: 'الطحنة على طريقة تحضيرك',
-              text: 'التركي بيحتاج طحنة ناعمة جدًا. الإسبريسو والفلتر ليهم درجات مختلفة؛ اختار الطحنة من الخيارات المتاحة لكل توليفة.',
-              icon: <SlidersHorizontal size={25} />,
-            },
-            {
-              number: '02',
-              title: 'اختار كمية تناسب يومك',
-              text: '250 جم لتجربة التوليفة أو استهلاك أقل، و500 جم لو القهوة جزء من يومك. اختار على قد استخدامك.',
-              icon: <Package size={25} />,
-            },
-            {
-              number: '03',
-              title: 'احتفظ بالرائحة',
-              text: 'احفظ البن في عبوة محكمة، في مكان جاف بعيد عن الشمس والحرارة. اقفل العبوة بعد كل استخدام.',
-              icon: <Bean size={25} />,
-            },
-          ].map(({ number, title, text, icon }) => (
-            <article className="coffee-note" key={number}>
-              <div className="note-top">
-                {icon}
-                <span>{number}</span>
-              </div>
-              <h3>{title}</h3>
-              <p>{text}</p>
-            </article>
-          ))}
+          {copy.guide.tips
+            .map((tip, index) => ({
+              ...tip,
+              number: '0' + (index + 1),
+              icon: [<SlidersHorizontal size={25} />, <Package size={25} />, <Bean size={25} />][
+                index
+              ],
+            }))
+            .map(({ number, title, text, icon }) => (
+              <article className="coffee-note" key={number}>
+                <div className="note-top">
+                  {icon}
+                  <span>{number}</span>
+                </div>
+                <h3>{title}</h3>
+                <p>{text}</p>
+              </article>
+            ))}
         </div>
         <div className="guide-banner">
           <span className="guide-icon">
@@ -419,54 +420,29 @@ export function Home() {
           </span>
           <div>
             <span className="eyebrow">فنجانك يبدأ من هنا</span>
-            <h2>مش عارف تختار؟</h2>
-            <p>قلّنا بتعمل قهوتك إزاي، ونرشّح لك من التوليفات المتاحة.</p>
+            <h2>{copy.guide.bannerTitle}</h2>
+            <p>{copy.guide.bannerText}</p>
           </div>
           <Link className="btn" to="/guide">
-            ساعدني أختار <ArrowLeft size={17} />
+            {copy.guide.cta} <ArrowLeft size={17} />
           </Link>
         </div>
         <div className="coffee-faq">
           <div>
-            <span className="eyebrow">قبل أول فنجان</span>
-            <h2>
-              سؤال صغير؟
-              <br />
-              إجابته هنا.
-            </h2>
-            <p>تفاصيل تساعدك تختار وانت مطمّن.</p>
+            <span className="eyebrow">{copy.faq.eyebrow}</span>
+            <h2>{copy.faq.title}</h2>
+            <p>{copy.faq.intro}</p>
           </div>
           <div className="faq-items">
-            <details>
-              <summary>
-                إيه الفرق بين المحوج والسادة؟
-                <Plus size={18} />
-              </summary>
-              <p>
-                المحوج بيجمع البن مع إضافات من التوابل حسب التوليفة، زي الحبهان. السادة بن من غير
-                إضافات. راجع وصف كل منتج لمعرفة تفاصيل التوليفة المتاحة.
-              </p>
-            </details>
-            <details>
-              <summary>
-                أطلب بن مطحون ولا حبوب؟
-                <Plus size={18} />
-              </summary>
-              <p>
-                لو عندك مطحنة، اختار حبوب كاملة واطحن الكمية اللي هتحضّرها. لو بتفضّل البن جاهز
-                للتحضير، اختار الطحنة المناسبة لأداتك من صفحة المنتج.
-              </p>
-            </details>
-            <details>
-              <summary>
-                أقدر أغيّر الوزن والطحنة؟
-                <Plus size={18} />
-              </summary>
-              <p>
-                أيوه، من صفحة المنتج تقدر تختار الوزن والطحنة من الخيارات المتاحة، وتراجع اختيارك في
-                السلة قبل إتمام الطلب.
-              </p>
-            </details>
+            {copy.faq.items.map((item) => (
+              <details key={item.question}>
+                <summary>
+                  {item.question}
+                  <Plus size={18} />
+                </summary>
+                <p>{item.answer}</p>
+              </details>
+            ))}
           </div>
         </div>
       </section>
@@ -484,20 +460,20 @@ export function Home() {
         </div>
         <div className="container hero-content">
           <div className="hero-copy">
-            <span className="eyebrow">دار البن البرازيلي · قهوة لها حكاية</span>
+            <span className="eyebrow">{copy.hero.eyebrow}</span>
             <h1>{settings.heroTitle}</h1>
             <p>{settings.heroSubtitle}</p>
             <div className="hero-buttons">
               <Link className="btn" to="/shop">
-                اختار قهوتك <ArrowLeft size={18} />
+                {copy.hero.primaryCta} <ArrowLeft size={18} />
               </Link>
-              <Link className="hero-secondary" to="/guide">
-                نساعدك تختار <ArrowLeft size={16} />
+              <Link className="hero-secondary" to="/branches">
+                {copy.hero.secondaryCta} <ArrowLeft size={16} />
               </Link>
             </div>
             <div className="hero-detail">
               <span />
-              <span>ريحة تعرفها. لحظة تستناها.</span>
+              <span>{copy.hero.detail}</span>
             </div>
           </div>
         </div>
@@ -506,21 +482,21 @@ export function Home() {
         <span>
           <Bean size={21} strokeWidth={1.4} />
           <span>
-            اختار <strong>توليفتك</strong>
+            {copy.ritual[0].lead} <strong>{copy.ritual[0].emphasis}</strong>
           </span>
         </span>
         <i />
         <span>
           <SlidersHorizontal size={21} strokeWidth={1.4} />
           <span>
-            ظبّط <strong>الوزن والطحنة</strong>
+            {copy.ritual[1].lead} <strong>{copy.ritual[1].emphasis}</strong>
           </span>
         </span>
         <i />
         <span>
           <ShoppingBag size={21} strokeWidth={1.4} />
           <span>
-            كمّل <strong>طلبك من الموقع</strong>
+            {copy.ritual[2].lead} <strong>{copy.ritual[2].emphasis}</strong>
           </span>
         </span>
       </div>
@@ -1148,21 +1124,31 @@ export function OrderPage() {
 
 export function Guide() {
   const { products } = useStore();
-  const [brew, setBrew] = useState('');
+  const [params] = useSearchParams();
+  const requestedBrew = params.get('brew') || '';
+  const [brew, setBrew] = useState(
+    ['تركي', 'إسبريسو', 'فلتر'].includes(requestedBrew) ? requestedBrew : '',
+  );
   const [roast, setRoast] = useState('');
+  useEffect(() => {
+    setBrew(['تركي', 'إسبريسو', 'فلتر'].includes(requestedBrew) ? requestedBrew : '');
+  }, [requestedBrew]);
+  const methodNotes = Object.fromEntries(
+    copy.brewing.items.map((item) => [item.name, item.guideText]),
+  );
   const choices = products.filter(
     (p) => (!brew || p.brew.includes(brew)) && (!roast || p.roast === roast),
   );
   return (
     <div className="container page-space">
       <div className="page-title">
-        <span className="eyebrow">مش لازم تكون خبير قهوة</span>
-        <h1>نلاقي قهوتك سوا.</h1>
-        <p>ابدأ بطريقتك، واختار درجة التحميص اللي بتحبها.</p>
+        <span className="eyebrow">{copy.guide.eyebrow}</span>
+        <h1>{copy.guide.title}</h1>
+        <p>{copy.guide.intro}</p>
       </div>
       <div className="guide-steps">
         <fieldset className="panel">
-          <legend>01 — بتعمل قهوتك إزاي؟</legend>
+          <legend>{copy.guide.brewStep}</legend>
           <div className="pills">
             {['تركي', 'إسبريسو', 'فلتر'].map((b) => (
               <button
@@ -1177,7 +1163,7 @@ export function Guide() {
           <p className="muted">طريقة التحضير تساعدنا نرشّح المنتجات والطحن المناسبين.</p>
         </fieldset>
         <fieldset className="panel">
-          <legend>02 — بتحب التحميص إيه؟</legend>
+          <legend>{copy.guide.roastStep}</legend>
           <div className="pills">
             {['فاتح', 'وسط', 'غامق'].map((r) => (
               <button
@@ -1192,6 +1178,12 @@ export function Guide() {
           <p className="muted">لو لسه بتكتشف ذوقك، سيب الاختيار مفتوح وشوف المتاح.</p>
         </fieldset>
       </div>
+      {brew && (
+        <div className="panel method-note">
+          <h2>فنجان {brew} على طريقتك</h2>
+          <p>{methodNotes[brew]}</p>
+        </div>
+      )}
       <SectionTitle eyebrow="اختيارات مناسبة لطريقتك" title="ابدأ من هنا" />
       {choices.length ? (
         <div className="product-grid">
@@ -1202,8 +1194,11 @@ export function Guide() {
       ) : (
         <Empty
           title="الاختيار ده مش متاح حاليًا"
-          description="جرّب درجة تحميص أو طريقة تحضير مختلفة."
+          description="مفيش توليفة متاحة للاختيار ده دلوقتي. تقدر تشوف البن المتاح أو تغيّر طريقة التحضير."
         >
+          <Link className="btn" to="/shop">
+            شوف البن المتاح <ArrowLeft size={16} />
+          </Link>
           <button
             className="btn secondary"
             onClick={() => {
@@ -1218,6 +1213,16 @@ export function Guide() {
     </div>
   );
 }
+export function BranchesPage() {
+  return (
+    <div className="page-space">
+      <Branches />
+      <div className="container branch-social">
+        <SocialLinks />
+      </div>
+    </div>
+  );
+}
 export function About() {
   const { settings } = useStore();
   return (
@@ -1226,7 +1231,12 @@ export function About() {
         <div>
           <span className="eyebrow">حكاية دار البن</span>
           <h1>{settings.storyTitle}</h1>
-          <p>{settings.storyText}</p>
+          {(settings.storyText === copy.story.shortText
+            ? copy.story.longParagraphs
+            : [settings.storyText]
+          ).map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
           <Link className="btn" to="/shop">
             اكتشف توليفتنا <ArrowLeft size={17} />
           </Link>
@@ -1236,28 +1246,23 @@ export function About() {
       <div className="social-story">
         <div>
           <span className="eyebrow">دار البن، أقرب لك</span>
-          <h2>الحكاية مكملة على صفحاتنا.</h2>
-          <p>تابع دار البن البرازيلي على فيسبوك وإنستجرام.</p>
+          <h2>{copy.social.title}</h2>
+          <p>{copy.social.text}</p>
         </div>
         <SocialLinks />
       </div>
       <section className="section about-journey">
-        <SectionTitle eyebrow="من حبوب البن لفنجانك" title="كل خطوة جزء من الحكاية" />
+        <SectionTitle eyebrow={copy.journey.eyebrow} title={copy.journey.title} />
+        <figure className="journey-visual">
+          <img
+            src="/images/coffee-journey.webp"
+            alt="صورة توضيحية لرحلة البن من الثمار إلى الحبوب المحمصة والفنجان"
+            loading="lazy"
+          />
+          <figcaption>صورة توضيحية لرحلة البن</figcaption>
+        </figure>
         <div className="coffee-notes">
-          {[
-            {
-              title: 'القطف والتجميع',
-              text: 'الحكاية بتبدأ من حبوب البن؛ قطفها وتجميعها أول خطوة في الرحلة.',
-            },
-            {
-              title: 'اختيار الحبوب',
-              text: 'اختيار الحبوب هو بداية الاهتمام بالتفاصيل، قبل ما تبدأ رحلة التحميص.',
-            },
-            {
-              title: 'التحميص والطحن',
-              text: 'من التحميص للطحن، لحد ما توصل التوليفة لفنجانك. كل تفصيلة لها دور في المذاق.',
-            },
-          ].map(({ title, text }, index) => (
+          {copy.journey.items.map(({ title, text }, index) => (
             <article className="coffee-note" key={title}>
               <div className="note-top">
                 <Bean size={25} />

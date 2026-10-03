@@ -1,3 +1,4 @@
+import copy from '../content/site-copy-ar.json';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Plus, Minus, Upload, PackageOpen } from 'lucide-react';
@@ -19,7 +20,7 @@ export function Brand({ compact = false }: { compact?: boolean }) {
       <img className="brand-logo" src="/images/dar-logo.webp" alt="" width="64" height="64" />
       <span>
         <strong>{settings.brand}</strong>
-        <small>الحكاية في الفنجان</small>
+        <small>{copy.brand.tagline}</small>
       </span>
     </span>
   );
@@ -90,7 +91,8 @@ export function ProductCard({
           to={href}
           aria-label={`اختيار ${product.name}${selectedVariant ? ` — ${selectedVariant.weight} جم` : ''}`}
         >
-          اختار الطحنة <ArrowLeft size={17} />
+          {selectedVariant ? copy.product.grindLabel : copy.product.selectCta}{' '}
+          <ArrowLeft size={17} />
         </Link>
         {variant && stock(product, variant) < 1 && (
           <small className="danger-text">غير متاح حاليًا</small>

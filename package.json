@@ -15,9 +15,11 @@
     "test": "node --test tests/api.test.mjs",
     "test:e2e": "playwright test",
     "format": "prettier --write src server scripts tests *.ts *.json *.html *.md",
-    "format:check": "prettier --check src server scripts tests *.ts *.json *.html *.md"
+    "format:check": "prettier --check src server scripts tests *.ts *.json *.html *.md",
+    "preview:build": "node scripts/build-preview.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/cairo": "^5.3.0",
     "@fontsource-variable/noto-naskh-arabic": "^5.3.0",
     "@fontsource-variable/noto-sans-arabic": "^5.2.8",
     "express": "^5.1.0",
