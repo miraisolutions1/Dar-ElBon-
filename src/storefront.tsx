@@ -89,11 +89,23 @@ export function StoreLayout() {
               <NavLink to="/guide">ساعدني أختار</NavLink>
             </nav>
             <div className="header-actions">
-              <Link to="/shop" className="btn header-order">
-                تسوّق القهوة
-              </Link>
+              <form
+                className="desktop-search"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  nav(
+                    '/shop?q=' +
+                      encodeURIComponent(String(new FormData(e.currentTarget).get('q') || '')),
+                  );
+                }}
+              >
+                <input name="q" aria-label="ابحث عن قهوتك" placeholder="بتدور على قهوة إيه؟" />
+                <button aria-label="بحث" type="submit">
+                  <Search size={19} />
+                </button>
+              </form>
               <button
-                className="icon-button"
+                className="icon-button search-toggle"
                 aria-label="البحث في القهوة"
                 aria-expanded={search}
                 onClick={() => setSearch((v) => !v)}
@@ -192,52 +204,32 @@ export function StoreLayout() {
 export function Home() {
   const { settings, products } = useStore();
   const featured = products.filter((p) => p.featured);
-  const heroImage =
-    settings.heroImage === '/images/coffee-hero.png'
-      ? '/images/coffee-latte-hero.png'
-      : settings.heroImage;
-  const coffeeSheet = '/images/coffee-selection.png';
+  const choices = featured
+    .flatMap((product) => product.variants.map((variant) => ({ product, variant })))
+    .slice(0, 4);
+  const coffeeSheet = '/images/brewing-methods.webp';
   const sections: Record<string, React.ReactNode> = {
     brewing: (
       <section className="container section coffee-selection">
-        <SectionTitle eyebrow="لكل مزاج، فنجان" title="قهوتك، بطريقتك.">
-          <Link className="text-link" to="/shop">
-            اكتشف القهوة <ArrowLeft size={17} />
-          </Link>
-        </SectionTitle>
+        <SectionTitle eyebrow="لكل فنجان، طريقته" title="بتعمل قهوتك إزاي؟" />
         <div className="brew-grid">
           {[
-            {
-              name: 'قهوة تركي',
-              text: 'فنجان صغير. مزاج كبير.',
-              position: '100%',
-              to: '/shop?brew=تركي',
-            },
-            {
-              name: 'إسبريسو',
-              text: 'لعشّاق القهوة المركّزة.',
-              position: '50%',
-              to: '/shop?brew=إسبريسو',
-            },
-            { name: 'مع الحليب', text: 'اكتشف الطحنة المناسبة لك.', position: '0%', to: '/guide' },
-          ].map(({ name, text, position, to }, i) => (
-            <Link to={to} className={`brew-card coffee-card coffee-card-${i}`} key={name}>
-              <span className="coffee-card-seal" aria-hidden="true">
-                <Coffee size={19} strokeWidth={1.4} />
-              </span>
+            { name: 'تركي', description: 'للفنجان الصغير، والمزاج الكبير.', position: '100%' },
+            { name: 'إسبريسو', description: 'للقهوة المركّزة، على طريقتك.', position: '50%' },
+            { name: 'فلتر', description: 'خد وقتك، واستمتع بالتفاصيل.', position: '0%' },
+          ].map(({ name, description, position }) => (
+            <Link key={name} to={`/shop?brew=${encodeURIComponent(name)}`} className="brew-card">
               <div
                 className="brew-photo"
                 role="img"
-                aria-label={`فنجان ${name}`}
+                aria-label={`طريقة تحضير ${name}`}
                 style={{ backgroundImage: `url(${coffeeSheet})`, backgroundPositionX: position }}
               />
-              <div className="coffee-card-caption">
-                <div>
-                  <h3>{name}</h3>
-                  <p>{text}</p>
-                </div>
-                <span className="coffee-card-arrow" aria-hidden="true">
-                  <ArrowLeft size={20} />
+              <div className="brew-caption">
+                <h3>{name}</h3>
+                <p>{description}</p>
+                <span className="brew-arrow" aria-hidden="true">
+                  <ArrowLeft size={17} />
                 </span>
               </div>
             </Link>
@@ -247,88 +239,57 @@ export function Home() {
     ),
     featured: (
       <section className="container section home-featured">
-        <SectionTitle eyebrow="من دار البن" title="التفاصيل بتعمل فرق.">
-          <Link className="text-link" to="/shop">
-            اكتشف كل القهوة <ArrowLeft size={16} />
-          </Link>
-        </SectionTitle>
-        {featured.length ? (
-          <div className={`featured-grid ${featured.length === 1 ? 'single' : ''}`}>
-            {featured.map((p) => (
-              <ProductCard product={p} key={p.id} />
+        <SectionTitle eyebrow="من دار البن، ليومك" title="اختيارات دار البن" />
+        <p className="section-intro">اختار توليفتك، وحدد الوزن والطحنة. الباقي على مزاجك.</p>
+        {choices.length ? (
+          <div className={`featured-grid ${choices.length <= 2 ? 'pair' : ''}`}>
+            {choices.map(({ product, variant }) => (
+              <ProductCard key={variant.id} product={product} variant={variant} />
             ))}
-            {featured.length === 1 && (
-              <div className="coffee-answers">
-                {[
-                  {
-                    title: 'الوزن اللي يناسب يومك',
-                    icon: Package,
-                    text: 'كل وزن وسعره قدامك في صفحة المنتج. اختار الكمية المناسبة لاستهلاكك قبل ما تضيفها للسلة.',
-                  },
-                  {
-                    title: 'الطحنة على طريقتك',
-                    icon: Bean,
-                    text: 'اختار الطحنة حسب طريقة التحضير من الخيارات المتاحة للمنتج. ودليل القهوة يساعدك تبدأ.',
-                  },
-                  {
-                    title: 'كل تفاصيل طلبك واضحة',
-                    icon: ShoppingBag,
-                    text: 'راجع المنتجات والكمية وتكلفة التوصيل في ملخص الطلب قبل التأكيد، وتابع حالته بعد تسجيله.',
-                  },
-                ].map(({ title, icon: Icon, text }) => (
-                  <details key={title}>
-                    <summary>
-                      <span className="answer-icon">
-                        <Icon size={23} strokeWidth={1.5} />
-                      </span>
-                      <span>{title}</span>
-                      <Plus className="answer-plus" size={20} />
-                    </summary>
-                    <p>{text}</p>
-                  </details>
-                ))}
-                <Link className="text-link" to="/guide">
-                  نلاقي قهوتك سوا <ArrowLeft size={17} />
-                </Link>
-              </div>
-            )}
           </div>
         ) : (
           <Empty title="توليفاتنا بتتجهز" description="المنتجات المميزة هتظهر هنا قريبًا." />
         )}
-      </section>
-    ),
-    story: (
-      <section className="container section home-story">
-        <div className="story-note">
-          <div className="story-emblem" aria-hidden="true">
-            <Coffee size={45} strokeWidth={1} />
-            <span>دار البن</span>
-          </div>
-          <div>
-            <span className="eyebrow">أهلًا بك في دار البن</span>
-            <h2>{settings.storyTitle}</h2>
-            <p>{settings.storyText}</p>
-          </div>
-          <Link className="btn secondary" to="/about">
-            اعرف الحكاية <ArrowLeft size={17} />
+        <div className="section-action">
+          <Link className="text-link" to="/shop">
+            تصفّح كل القهوة <ArrowLeft size={17} />
           </Link>
         </div>
       </section>
     ),
+    story: (
+      <section className="container section home-story">
+        <div className="story-band">
+          <img
+            className="story-background"
+            src="/images/coffee-story.webp"
+            alt="حبوب بن محمصة في مغرفة خشبية"
+            loading="lazy"
+          />
+          <div className="story-copy">
+            <span className="eyebrow">أهلًا بك في دار البن</span>
+            <h2>{settings.storyTitle}</h2>
+            <p>{settings.storyText}</p>
+            <Link className="btn story-button" to="/about">
+              اعرف الحكاية <ArrowLeft size={17} />
+            </Link>
+          </div>
+        </div>
+      </section>
+    ),
     guide: (
-      <section className="container section">
+      <section className="container section home-guide">
         <div className="guide-banner">
           <span className="guide-icon">
-            <Coffee size={44} strokeWidth={1.1} />
+            <Coffee size={40} strokeWidth={1.1} />
           </span>
           <div>
-            <span className="eyebrow">نبدأها سوا</span>
-            <h2>محتار؟ نلاقي قهوتك سوا.</h2>
-            <p>اختيارات بسيطة توصّلك للتوليفة المناسبة لطريقتك.</p>
+            <span className="eyebrow">فنجانك يبدأ من هنا</span>
+            <h2>مش عارف تختار؟</h2>
+            <p>ابدأ بطريقة تحضيرك، ونلاقي قهوتك سوا.</p>
           </div>
           <Link className="btn" to="/guide">
-            ساعدني أختار <ArrowLeft size={18} />
+            ساعدني أختار <ArrowLeft size={17} />
           </Link>
         </div>
       </section>
@@ -339,38 +300,53 @@ export function Home() {
       <section className="hero">
         <div className="hero-visual">
           <img
-            src={heroImage}
-            alt="فنجان لاتيه وعبوة دار البن البرازيلي في ضوء دافئ"
+            src={settings.heroImage}
+            alt="عبوة دار البن البرازيلي مع فنجان قهوة وركوة نحاسية"
             fetchPriority="high"
           />
         </div>
-        <svg
-          className="hero-curve"
-          viewBox="0 0 1000 600"
-          preserveAspectRatio="none"
-          aria-hidden="true"
-        >
-          <path d="M1000 0H390C505 136 375 346 516 469C625 570 829 617 1000 548Z" />
-        </svg>
         <div className="container hero-content">
           <div className="hero-copy">
-            <span className="eyebrow">
-              <i />
-              من دار البن، ليومك
-            </span>
+            <span className="eyebrow">دار البن البرازيلي · لكل مزاج قهوته</span>
             <h1>{settings.heroTitle}</h1>
             <p>{settings.heroSubtitle}</p>
             <div className="hero-buttons">
-              <Link className="btn light" to="/shop">
+              <Link className="btn" to="/shop">
                 اختار قهوتك <ArrowLeft size={18} />
               </Link>
-              <Link className="btn hero-secondary" to="/about">
-                اتعرّف علينا
+              <Link className="hero-secondary" to="/guide">
+                نساعدك تختار <ArrowLeft size={16} />
               </Link>
+            </div>
+            <div className="hero-detail">
+              <span />
+              <span>توليفتك. طحنتك. فنجانك.</span>
             </div>
           </div>
         </div>
       </section>
+      <div className="ritual-strip container">
+        <span>
+          <Bean size={21} strokeWidth={1.4} />
+          <span>
+            اختار <strong>توليفتك</strong>
+          </span>
+        </span>
+        <i />
+        <span>
+          <SlidersHorizontal size={21} strokeWidth={1.4} />
+          <span>
+            ظبّط <strong>الوزن والطحنة</strong>
+          </span>
+        </span>
+        <i />
+        <span>
+          <ShoppingBag size={21} strokeWidth={1.4} />
+          <span>
+            كمّل <strong>طلبك من الموقع</strong>
+          </span>
+        </span>
+      </div>
       {settings.sections.map((s) => (
         <div key={s}>{sections[s]}</div>
       ))}
@@ -479,19 +455,21 @@ export function Shop() {
 
 export function ProductPage() {
   const { slug } = useParams();
+  const [params] = useSearchParams();
+  const requestedVariant = params.get('variant') || '';
   const { products, settings } = useStore();
   const { add } = useCart();
   const product = products.find((p) => p.slug === slug);
-  const [variantId, setVariant] = useState('');
+  const [variantId, setVariant] = useState(requestedVariant);
   const [grind, setGrind] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   useEffect(() => {
-    setVariant('');
+    setVariant(requestedVariant);
     setGrind('');
     setQuantity(1);
     setAdded(false);
-  }, [slug]);
+  }, [slug, requestedVariant]);
   if (!product) return <NotFound />;
   const variant = product.variants.find((v) => v.id === variantId) || startingVariant(product);
   const selectedGrind = product.grinds.includes(grind) ? grind : product.grinds[0];

@@ -1,7 +1,16 @@
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Coffee, Plus, Minus, Upload, PackageOpen } from 'lucide-react';
-import { api, money, stock, startingVariant, statusLabels, useStore, type Product } from './lib';
+import {
+  api,
+  money,
+  stock,
+  startingVariant,
+  statusLabels,
+  useStore,
+  type Product,
+  type Variant,
+} from './lib';
 
 export function Brand({ compact = false }: { compact?: boolean }) {
   const { settings } = useStore();
@@ -36,11 +45,18 @@ export function SectionTitle({
     </div>
   );
 }
-export function ProductCard({ product }: { product: Product }) {
-  const variant = startingVariant(product);
+export function ProductCard({
+  product,
+  variant: selectedVariant,
+}: {
+  product: Product;
+  variant?: Variant;
+}) {
+  const variant = selectedVariant || startingVariant(product);
+  const href = `/products/${product.slug}${selectedVariant?.id ? `?variant=${encodeURIComponent(selectedVariant.id)}` : ''}`;
   return (
     <article className="product-card">
-      <Link className="product-image" to={`/products/${product.slug}`}>
+      <Link className="product-image" to={href}>
         <img src={product.image} alt={product.name} loading="lazy" />
         <span className="image-pill">{product.kind}</span>
       </Link>
@@ -56,26 +72,28 @@ export function ProductCard({ product }: { product: Product }) {
             {product.roast}
           </span>
         </div>
-        <Link to={`/products/${product.slug}`}>
+        <Link to={href}>
           <h3>{product.name}</h3>
         </Link>
         <div className="row between">
           <div>
             {variant && (
               <>
-                <small className="muted">يبدأ من · {variant.weight} جم</small>
+                <small className="muted">
+                  {selectedVariant ? 'الوزن' : 'يبدأ من'} · {variant.weight} جم
+                </small>
                 <strong className="price">{money(variant.price)}</strong>
               </>
             )}
           </div>
-          <Link
-            className="round-button"
-            to={`/products/${product.slug}`}
-            aria-label={`اختيار ${product.name}`}
-          >
-            <ArrowLeft size={19} />
-          </Link>
         </div>
+        <Link
+          className="btn product-select"
+          to={href}
+          aria-label={`اختيار ${product.name}${selectedVariant ? ` — ${selectedVariant.weight} جم` : ''}`}
+        >
+          اختار الطحنة <ArrowLeft size={17} />
+        </Link>
         {variant && stock(product, variant) < 1 && (
           <small className="danger-text">غير متاح حاليًا</small>
         )}

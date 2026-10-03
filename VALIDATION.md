@@ -34,3 +34,11 @@ Rebuilt the storefront around the supplied brown-and-cream cafe reference: an en
 - Browser checks at 320, 390, 768, 1024 and 1440 pixels found no document-level horizontal overflow. Desktop and mobile screenshots were visually inspected.
 - The updated standalone HTML preview was checked through an internal HTTP server, then with browser networking disabled. Accordion, product/weight selection and cart navigation passed with no external requests or browser errors. That artifact deliberately does not submit orders; its admin view is a labeled screenshot. Direct file-URL execution cannot be verified in the managed browser, which blocks that scheme.
 - These checks do not establish a public deployment or owner approval of the visual revision.
+
+## مراجعة الاتجاه الداكن — 3 أكتوبر 2026
+
+- بناء الإنتاج وTypeScript ناجحان.
+- اختبارات API: 10 ناجحة.
+- اختبارات المتصفح: 4 ناجحة، تشمل الطلب والإدارة، الموبايل، تعديل المحتوى، واختيار وزن من الرئيسية مع إعادة التحميل والسلة.
+- معاينة بصرية فعلية للكمبيوتر 1440 والموبايل 390؛ لا يوجد تمرير أفقي على الموبايل.
+- الصور بصيغة WebP، والمعاينة المستقلة نحو 1.75 ميجابايت بدلًا من 9.43 ميجابايت.

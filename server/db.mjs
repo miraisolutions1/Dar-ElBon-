@@ -8,7 +8,7 @@ export const defaults = {
   mode: 'preview',
   heroTitle: 'قهوتك،\nعلى مزاجك.',
   heroSubtitle: 'في كل فنجان حكاية. اختار توليفتك، وظبط الوزن والطحنة على طريقتك.',
-  heroImage: '/images/coffee-hero.png',
+  heroImage: '/images/coffee-cinematic.webp',
   storyTitle: 'حكاية تبدأ\nمن فنجان.',
   storyText:
     'للقهوة وقتها، وللمزاج توليفته. في دار البن نهتم بالتفاصيل التي تجعل اختيار قهوتك أبسط؛ من التوليفة إلى الوزن والطحنة المناسبة لطريقتك.',
@@ -75,7 +75,7 @@ export function openDatabase(directory = process.env.DATA_DIR || './data') {
       JSON.stringify(['تركي']),
       'محوج',
       JSON.stringify(['تركي ناعم', 'حبوب كاملة']),
-      '/images/coffee-hero.png',
+      '/images/coffee-tin-studio.webp',
       1,
       1,
       1,

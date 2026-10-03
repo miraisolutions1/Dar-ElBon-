@@ -102,3 +102,18 @@ test('admin updates product pricing and content and mobile admin navigation work
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: '.local/screenshots/admin-mobile.png', fullPage: true });
 });
+
+test('homepage weight choice survives reload and adds the selected weight to cart', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page
+    .getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي — 500 جم', exact: true })
+    .click();
+  await expect(page).toHaveURL(/variant=/);
+  await page.reload();
+  await expect(page.getByRole('button', { name: '500 جم', exact: true })).toHaveClass(/selected/);
+  await page.getByRole('button', { name: 'أضف للسلة', exact: true }).click();
+  await page.getByRole('link', { name: /راجع السلة/ }).click();
+  await expect(page.getByText('500 جم · تركي ناعم')).toBeVisible();
+});
