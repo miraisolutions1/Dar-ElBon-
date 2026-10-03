@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Coffee, Plus, Minus, Upload, PackageOpen } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, Upload, PackageOpen } from 'lucide-react';
 import {
   api,
   money,
@@ -16,12 +16,10 @@ export function Brand({ compact = false }: { compact?: boolean }) {
   const { settings } = useStore();
   return (
     <span className={`brand ${compact ? 'compact' : ''}`}>
-      <span className="brand-symbol">
-        <Coffee size={25} strokeWidth={1.3} />
-      </span>
+      <img className="brand-logo" src="/images/dar-logo.webp" alt="" width="64" height="64" />
       <span>
         <strong>{settings.brand}</strong>
-        <small>THE HOUSE OF BRAZILIAN COFFEE</small>
+        <small>الحكاية في الفنجان</small>
       </span>
     </span>
   );

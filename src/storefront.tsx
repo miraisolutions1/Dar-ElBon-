@@ -28,6 +28,8 @@ import {
   CheckCircle2,
   Minus,
   Plus,
+  Facebook,
+  Instagram,
 } from 'lucide-react';
 import {
   Brand,
@@ -54,6 +56,31 @@ import {
   type Order,
 } from './lib';
 
+const socialPages = [
+  { name: 'فيسبوك', href: 'https://www.facebook.com/thehouseofbraziliancoffee/', icon: Facebook },
+  { name: 'إنستجرام', href: 'https://www.instagram.com/braziliancaffe/', icon: Instagram },
+];
+
+function SocialLinks() {
+  return (
+    <div className="social-links">
+      {socialPages.map(({ name, href, icon: Icon }) => (
+        <a
+          key={name}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`دار البن على ${name} — يفتح في نافذة جديدة`}
+        >
+          <Icon size={18} />
+          <span>{name}</span>
+          <ArrowUpLeft size={13} />
+        </a>
+      ))}
+    </div>
+  );
+}
+
 export function StoreLayout() {
   const { settings } = useStore();
   const { count } = useCart();
@@ -65,7 +92,17 @@ export function StoreLayout() {
     setMenu(false);
     setSearch(false);
     window.scrollTo(0, 0);
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenu(false);
+        setSearch(false);
+      }
+    };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, []);
   return (
     <div className={`storefront ${location.pathname === '/' ? 'home-page' : ''}`}>
       <a href="#main" className="skip-link">
@@ -80,35 +117,20 @@ export function StoreLayout() {
             <Link to="/" aria-label="دار البن — الرئيسية">
               <Brand />
             </Link>
-            <nav className={menu ? 'site-nav open' : 'site-nav'} aria-label="القائمة الرئيسية">
-              <NavLink to="/" end>
-                الرئيسية
-              </NavLink>
-              <NavLink to="/shop">قهوتنا</NavLink>
-              <NavLink to="/about">حكاية دار البن</NavLink>
-              <NavLink to="/guide">ساعدني أختار</NavLink>
-            </nav>
+            <p className="header-note">توليفة تحكي، وفنجان يجمع.</p>
             <div className="header-actions">
-              <form
-                className="desktop-search"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  nav(
-                    '/shop?q=' +
-                      encodeURIComponent(String(new FormData(e.currentTarget).get('q') || '')),
-                  );
-                }}
-              >
-                <input name="q" aria-label="ابحث عن قهوتك" placeholder="بتدور على قهوة إيه؟" />
-                <button aria-label="بحث" type="submit">
-                  <Search size={19} />
-                </button>
-              </form>
+              <Link className="header-guide" to="/guide">
+                دليل اختيار القهوة <ArrowLeft size={15} />
+              </Link>
               <button
                 className="icon-button search-toggle"
                 aria-label="البحث في القهوة"
                 aria-expanded={search}
-                onClick={() => setSearch((v) => !v)}
+                aria-controls="mobile-search"
+                onClick={() => {
+                  setSearch((v) => !v);
+                  setMenu(false);
+                }}
               >
                 <Search size={21} />
               </button>
@@ -118,21 +140,60 @@ export function StoreLayout() {
                 aria-label={`السلة، ${count} منتجات`}
               >
                 <ShoppingBag size={21} />
+                <b className="cart-label">سلتك</b>
                 {count > 0 && <span>{count}</span>}
               </Link>
               <button
                 className="icon-button mobile-menu"
                 aria-label="فتح القائمة"
                 aria-expanded={menu}
-                onClick={() => setMenu((v) => !v)}
+                aria-controls="main-navigation"
+                onClick={() => {
+                  setMenu((v) => !v);
+                  setSearch(false);
+                }}
               >
                 {menu ? <X /> : <Menu />}
               </button>
             </div>
           </div>
+          <div className="header-navigation">
+            <div className="container navigation-inner">
+              <nav
+                id="main-navigation"
+                className={menu ? 'site-nav open' : 'site-nav'}
+                aria-label="القائمة الرئيسية"
+              >
+                <NavLink to="/" end>
+                  الرئيسية
+                </NavLink>
+                <NavLink to="/shop">قهوتنا</NavLink>
+                <NavLink to="/about">حكاية دار البن</NavLink>
+                <NavLink to="/guide">ساعدني أختار</NavLink>
+              </nav>
+              <form
+                className="desktop-search"
+                role="search"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  nav(
+                    '/shop?q=' +
+                      encodeURIComponent(String(new FormData(e.currentTarget).get('q') || '')),
+                  );
+                }}
+              >
+                <input name="q" aria-label="ابحث عن قهوتك" placeholder="ابحث عن توليفتك المفضلة…" />
+                <button aria-label="بحث" type="submit">
+                  <Search size={19} />
+                </button>
+              </form>
+            </div>
+          </div>
           {search && (
             <form
               className="header-search container"
+              id="mobile-search"
+              role="search"
               onSubmit={(e) => {
                 e.preventDefault();
                 nav(
@@ -156,10 +217,11 @@ export function StoreLayout() {
                 <Brand />
               </Link>
               <p>
-                لكل مزاج قهوته.
+                الحكاية في الفنجان.
                 <br />
                 ولكل يوم، فنجان يستاهل.
               </p>
+              <SocialLinks />
             </div>
             <div>
               <h3>اكتشف دار البن</h3>
@@ -239,8 +301,10 @@ export function Home() {
     ),
     featured: (
       <section className="container section home-featured">
-        <SectionTitle eyebrow="من دار البن، ليومك" title="اختيارات دار البن" />
-        <p className="section-intro">اختار توليفتك، وحدد الوزن والطحنة. الباقي على مزاجك.</p>
+        <SectionTitle eyebrow="فنجانك اليومي يبدأ هنا" title="توليفتك، بالمقدار اللي يناسبك" />
+        <p className="section-intro">
+          نفس التوليفة اللي بتحبها، بوزنك وطحنتك. اختار العبوة وكمّل تفاصيل فنجانك.
+        </p>
         {choices.length ? (
           <div className={`featured-grid ${choices.length <= 2 ? 'pair' : ''}`}>
             {choices.map(({ product, variant }) => (
@@ -279,6 +343,38 @@ export function Home() {
     ),
     guide: (
       <section className="container section home-guide">
+        <SectionTitle eyebrow="تفاصيل صغيرة، فرق في الفنجان" title="خلي كل فنجان على مزاجك" />
+        <div className="coffee-notes">
+          {[
+            {
+              number: '01',
+              title: 'الطحنة على طريقة تحضيرك',
+              text: 'التركي بيحتاج طحنة ناعمة جدًا. الإسبريسو والفلتر ليهم درجات مختلفة؛ اختار الطحنة من الخيارات المتاحة لكل توليفة.',
+              icon: <SlidersHorizontal size={25} />,
+            },
+            {
+              number: '02',
+              title: 'اختار كمية تناسب يومك',
+              text: '250 جم لتجربة التوليفة أو استهلاك أقل، و500 جم لو القهوة جزء من يومك. اختار على قد استخدامك.',
+              icon: <Package size={25} />,
+            },
+            {
+              number: '03',
+              title: 'احتفظ بالرائحة',
+              text: 'احفظ البن في عبوة محكمة، في مكان جاف بعيد عن الشمس والحرارة. اقفل العبوة بعد كل استخدام.',
+              icon: <Bean size={25} />,
+            },
+          ].map(({ number, title, text, icon }) => (
+            <article className="coffee-note" key={number}>
+              <div className="note-top">
+                {icon}
+                <span>{number}</span>
+              </div>
+              <h3>{title}</h3>
+              <p>{text}</p>
+            </article>
+          ))}
+        </div>
         <div className="guide-banner">
           <span className="guide-icon">
             <Coffee size={40} strokeWidth={1.1} />
@@ -286,11 +382,54 @@ export function Home() {
           <div>
             <span className="eyebrow">فنجانك يبدأ من هنا</span>
             <h2>مش عارف تختار؟</h2>
-            <p>ابدأ بطريقة تحضيرك، ونلاقي قهوتك سوا.</p>
+            <p>قلّنا بتعمل قهوتك إزاي، ونرشّح لك من التوليفات المتاحة.</p>
           </div>
           <Link className="btn" to="/guide">
             ساعدني أختار <ArrowLeft size={17} />
           </Link>
+        </div>
+        <div className="coffee-faq">
+          <div>
+            <span className="eyebrow">قبل أول فنجان</span>
+            <h2>
+              سؤال صغير؟
+              <br />
+              إجابته هنا.
+            </h2>
+            <p>تفاصيل تساعدك تختار وانت مطمّن.</p>
+          </div>
+          <div className="faq-items">
+            <details>
+              <summary>
+                إيه الفرق بين المحوج والسادة؟
+                <Plus size={18} />
+              </summary>
+              <p>
+                المحوج بيجمع البن مع إضافات من التوابل حسب التوليفة، زي الحبهان. السادة بن من غير
+                إضافات. راجع وصف كل منتج لمعرفة تفاصيل التوليفة المتاحة.
+              </p>
+            </details>
+            <details>
+              <summary>
+                أطلب بن مطحون ولا حبوب؟
+                <Plus size={18} />
+              </summary>
+              <p>
+                لو عندك مطحنة، اختار حبوب كاملة واطحن الكمية اللي هتحضّرها. لو بتفضّل البن جاهز
+                للتحضير، اختار الطحنة المناسبة لأداتك من صفحة المنتج.
+              </p>
+            </details>
+            <details>
+              <summary>
+                أقدر أغيّر الوزن والطحنة؟
+                <Plus size={18} />
+              </summary>
+              <p>
+                أيوه، من صفحة المنتج تقدر تختار الوزن والطحنة من الخيارات المتاحة، وتراجع اختيارك في
+                السلة قبل إتمام الطلب.
+              </p>
+            </details>
+          </div>
         </div>
       </section>
     ),
@@ -307,7 +446,7 @@ export function Home() {
         </div>
         <div className="container hero-content">
           <div className="hero-copy">
-            <span className="eyebrow">دار البن البرازيلي · لكل مزاج قهوته</span>
+            <span className="eyebrow">دار البن البرازيلي · قهوة لها حكاية</span>
             <h1>{settings.heroTitle}</h1>
             <p>{settings.heroSubtitle}</p>
             <div className="hero-buttons">
@@ -320,7 +459,7 @@ export function Home() {
             </div>
             <div className="hero-detail">
               <span />
-              <span>توليفتك. طحنتك. فنجانك.</span>
+              <span>ريحة تعرفها. لحظة تستناها.</span>
             </div>
           </div>
         </div>
@@ -1055,6 +1194,14 @@ export function About() {
           </Link>
         </div>
         <img src={settings.heroImage} alt="قهوة دار البن البرازيلي" />
+      </div>
+      <div className="social-story">
+        <div>
+          <span className="eyebrow">دار البن، أقرب لك</span>
+          <h2>الحكاية مكملة على صفحاتنا.</h2>
+          <p>تابع دار البن البرازيلي على فيسبوك وإنستجرام.</p>
+        </div>
+        <SocialLinks />
       </div>
     </div>
   );

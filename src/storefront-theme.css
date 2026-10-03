@@ -1031,3 +1031,360 @@
     transition: none;
   }
 }
+
+/* Brand and navigation refinement */
+.brand-logo {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.storefront .brand-logo {
+  width: 66px;
+  height: 66px;
+}
+.storefront .brand small {
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0;
+  color: #8b632f;
+  margin-top: 0;
+}
+.storefront .header-inner {
+  height: 98px;
+}
+.storefront .header-note {
+  color: #9a7951;
+  font-family: 'Noto Naskh Arabic Variable', serif;
+  font-size: 21px;
+}
+.storefront .header-guide {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  padding-inline-end: 24px;
+  border-inline-end: 1px solid #e8ddca;
+}
+.storefront .cart-link {
+  width: auto;
+  gap: 9px;
+  padding: 10px 14px;
+  border: 1px solid #e8ddca;
+  border-radius: 7px;
+}
+.storefront .cart-label {
+  font-size: 12px;
+  font-weight: 500;
+}
+.storefront .header-navigation {
+  border-top: 1px solid #eee5d8;
+  background: #f8f3e9;
+}
+.storefront .navigation-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 25px;
+  min-height: 56px;
+}
+.storefront .site-nav {
+  gap: 36px;
+}
+.storefront .site-nav a {
+  padding-block: 16px;
+}
+.storefront .desktop-search {
+  display: flex;
+  width: 300px;
+  background: #fffdf8;
+  border-radius: 5px;
+}
+.storefront .desktop-search input {
+  font-size: 12px;
+  padding-block: 8px;
+}
+.storefront .hero {
+  height: 585px;
+}
+.storefront .hero h1 {
+  font-size: 74px;
+  line-height: 1.35;
+}
+.storefront .hero-copy > p {
+  max-width: 405px;
+  line-height: 2;
+}
+.storefront .coffee-notes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+  margin: 30px 0;
+}
+.storefront .coffee-note {
+  border-top: 1px solid #d7bd89;
+  padding: 24px 20px;
+  background: #f5eee2;
+  border-radius: 0 0 9px 9px;
+}
+.storefront .note-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #926b37;
+  margin-bottom: 19px;
+}
+.storefront .note-top span {
+  font-family: Georgia, serif;
+  color: #c7b08c;
+  font-size: 30px;
+}
+.storefront .coffee-note h3 {
+  font-size: 17px;
+  margin-bottom: 12px;
+}
+.storefront .coffee-note p {
+  font-size: 12px;
+  line-height: 2;
+  color: #75624f;
+}
+.storefront .coffee-faq {
+  display: grid;
+  grid-template-columns: 1fr 1.8fr;
+  gap: 70px;
+  margin-top: 65px;
+}
+.storefront .coffee-faq h2 {
+  font-size: 31px;
+  line-height: 1.6;
+  margin-top: 8px;
+}
+.storefront .coffee-faq > div > p {
+  font-size: 12px;
+  color: #867765;
+  margin-top: 10px;
+}
+.storefront .faq-items details {
+  border-bottom: 1px solid #e1d5c2;
+}
+.storefront .faq-items summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 21px 0;
+  cursor: pointer;
+  list-style: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+.storefront .faq-items summary::-webkit-details-marker {
+  display: none;
+}
+.storefront .faq-items summary svg {
+  flex-shrink: 0;
+  color: #a27c42;
+  transition: transform 0.2s;
+}
+.storefront .faq-items details[open] summary svg {
+  transform: rotate(45deg);
+}
+.storefront .faq-items details p {
+  color: #75624f;
+  font-size: 12px;
+  line-height: 2;
+  padding-bottom: 22px;
+  max-width: 590px;
+}
+.storefront .footer-top .brand-logo {
+  width: 58px;
+  height: 58px;
+}
+.storefront .footer-top .brand small {
+  font-size: 10px;
+}
+@media (min-width: 761px) and (max-width: 1100px) {
+  .storefront .header-note {
+    font-size: 17px;
+  }
+  .storefront .site-nav {
+    gap: 23px;
+  }
+  .storefront .desktop-search {
+    width: 245px;
+  }
+  .storefront .hero h1 {
+    font-size: 59px;
+  }
+  .storefront .coffee-note {
+    padding: 20px 15px;
+  }
+  .storefront .coffee-note h3 {
+    font-size: 14px;
+  }
+}
+@media (max-width: 760px) {
+  .storefront .header-inner {
+    height: 84px;
+    gap: 7px;
+  }
+  .storefront .brand {
+    gap: 7px;
+  }
+  .storefront .brand-logo {
+    width: 47px;
+    height: 47px;
+  }
+  .storefront .brand strong {
+    font-size: 19px;
+  }
+  .storefront .brand small {
+    font-size: 9px;
+  }
+  .storefront .header-note,
+  .storefront .header-guide,
+  .storefront .cart-label,
+  .storefront .desktop-search {
+    display: none;
+  }
+  .storefront .header-navigation {
+    border: 0;
+  }
+  .storefront .navigation-inner {
+    min-height: 0;
+  }
+  .storefront .site-nav {
+    top: 84px;
+    gap: 0;
+    padding: 12px 18px;
+    box-shadow: 0 15px 25px #30221815;
+  }
+  .storefront .site-nav a {
+    padding: 13px 5px;
+    font-size: 14px;
+  }
+  .storefront .cart-link {
+    padding: 0;
+    border: 0;
+    width: 34px;
+    height: 40px;
+  }
+  .storefront .icon-button {
+    width: 34px;
+    height: 40px;
+  }
+  .storefront .hero {
+    height: 655px;
+  }
+  .storefront .hero h1 {
+    font-size: 44px;
+    line-height: 1.35;
+  }
+  .storefront .hero-copy > p {
+    max-width: 315px;
+    font-size: 12px;
+    line-height: 1.9;
+  }
+  .storefront .coffee-notes {
+    grid-template-columns: 1fr;
+    gap: 13px;
+    margin-top: 25px;
+  }
+  .storefront .coffee-note {
+    padding: 19px;
+  }
+  .storefront .note-top {
+    margin-bottom: 10px;
+  }
+  .storefront .note-top span {
+    font-size: 24px;
+  }
+  .storefront .coffee-note h3 {
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+  .storefront .coffee-faq {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    margin-top: 38px;
+  }
+  .storefront .coffee-faq h2 {
+    font-size: 26px;
+  }
+  .storefront .coffee-faq h2 br {
+    display: none;
+  }
+  .storefront .faq-items summary {
+    font-size: 13px;
+    padding-block: 18px;
+  }
+}
+@media (max-width: 360px) {
+  .storefront .brand strong {
+    font-size: 16px;
+  }
+  .storefront .brand-logo {
+    width: 40px;
+    height: 40px;
+  }
+  .storefront .header-actions {
+    gap: 0;
+  }
+  .storefront .hero h1 {
+    font-size: 40px;
+  }
+}
+.storefront .social-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.storefront .social-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #d7c7ae;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 11px;
+  color: #725333;
+  min-height: 42px;
+}
+.storefront .social-links a:hover {
+  background: #e9dec9;
+}
+.storefront .social-story {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 25px;
+  padding: 34px;
+  background: #f1e7d6;
+  border-radius: 10px;
+  margin-top: 45px;
+}
+.storefront .social-story h2 {
+  font-size: 25px;
+  margin-block: 8px;
+}
+.storefront .social-story p {
+  font-size: 13px;
+  color: #75624f;
+}
+.storefront .story-copy h2,
+.storefront .about-layout h1 {
+  white-space: pre-line;
+}
+@media (max-width: 760px) {
+  .storefront .social-story {
+    display: block;
+    padding: 25px;
+  }
+  .storefront .social-story h2 {
+    font-size: 22px;
+  }
+  .storefront .footer-top .social-links {
+    gap: 8px;
+  }
+}

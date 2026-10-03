@@ -8,7 +8,7 @@ test('desktop purchase persists, appears in admin, and follows fulfillment updat
   page.on('pageerror', (e) => errors.push(e.message));
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: /قهوتك،/, level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /الحكاية/, level: 1 })).toBeVisible();
   await page.screenshot({ path: '.local/screenshots/home-desktop.png', fullPage: true });
   await page.getByRole('link', { name: 'اختار قهوتك', exact: true }).click();
   await page.getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي' }).click();
@@ -49,7 +49,7 @@ test('mobile browsing, filters and cart remain usable without horizontal overflo
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.evaluate(() => document.fonts.ready);
-  await expect(page.getByRole('heading', { name: /قهوتك،/, level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /الحكاية/, level: 1 })).toBeVisible();
   const checkOverflow = async () =>
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
@@ -116,4 +116,33 @@ test('homepage weight choice survives reload and adds the selected weight to car
   await page.getByRole('button', { name: 'أضف للسلة', exact: true }).click();
   await page.getByRole('link', { name: /راجع السلة/ }).click();
   await expect(page.getByText('500 جم · تركي ناعم')).toBeVisible();
+});
+
+test('header search and mobile navigation keep the active panel consistent', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/');
+  await expect(page.locator('.site-header .brand-logo')).toBeVisible();
+  expect(
+    await page
+      .locator('.site-header .brand-logo')
+      .evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0),
+  ).toBe(true);
+  await page.getByLabel('ابحث عن قهوتك').fill('محوج');
+  await page.getByRole('button', { name: 'بحث', exact: true }).click();
+  await expect(page).toHaveURL(/shop\?q=/);
+  await expect(page.getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي' })).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('button', { name: 'فتح القائمة' }).click();
+  await expect(page.getByRole('navigation', { name: 'القائمة الرئيسية' })).toBeVisible();
+  await page.getByRole('button', { name: 'البحث في القهوة' }).click();
+  await expect(page.getByRole('navigation', { name: 'القائمة الرئيسية' })).toBeHidden();
+  await page.getByLabel('كلمة البحث').fill('تركي');
+  await page.getByRole('button', { name: 'بحث', exact: true }).click();
+  await expect(page.getByLabel('كلمة البحث')).toHaveCount(0);
+  await page.getByRole('button', { name: 'فتح القائمة' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'فتح القائمة' })).toHaveAttribute(
+    'aria-expanded',
+    'false',
+  );
 });
