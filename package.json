@@ -12,7 +12,7 @@
     "start": "node server/index.mjs",
     "admin:create": "node scripts/admin.mjs",
     "db:backup": "node scripts/backup.mjs",
-    "test": "node --test tests/api.test.mjs",
+    "test": "node --test tests/api.test.mjs tests/taste-matching.test.mjs",
     "test:e2e": "playwright test",
     "format": "prettier --write src server scripts tests *.ts *.json *.html *.md",
     "format:check": "prettier --check src server scripts tests *.ts *.json *.html *.md",

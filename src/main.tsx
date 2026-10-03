@@ -16,6 +16,8 @@ import {
   Checkout,
   OrderPage,
   Guide,
+  QuizPage,
+  RecipesPage,
   About,
   BranchesPage,
   Policy,
@@ -67,6 +69,8 @@ createRoot(document.getElementById('root')!).render(
               <Route path="checkout" element={<Checkout />} />
               <Route path="order/:token" element={<OrderPage />} />
               <Route path="guide" element={<Guide />} />
+              <Route path="quiz" element={<QuizPage />} />
+              <Route path="learn" element={<RecipesPage />} />
               <Route path="about" element={<About />} />
               <Route path="branches" element={<BranchesPage />} />
               <Route path="policies/:type" element={<Policy />} />

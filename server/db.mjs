@@ -1,4 +1,5 @@
 import copy from '../content/site-copy-ar.json' with { type: 'json' };
+import experienceCopy from '../content/coffee-experience-ar.json' with { type: 'json' };
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -9,7 +10,7 @@ export const defaults = {
   mode: 'preview',
   heroTitle: copy.hero.title,
   heroSubtitle: copy.hero.subtitle,
-  heroImage: '/images/coffee-cinematic.webp',
+  heroImage: '/images/coffee-yellow-hero.webp',
   storyTitle: copy.story.title,
   storyText: copy.story.shortText,
   contactPhone: '',
@@ -19,7 +20,7 @@ export const defaults = {
   returnsPolicy: '',
   privacyPolicy: '',
   codEnabled: true,
-  sections: ['brewing', 'featured', 'story', 'branches', 'guide'],
+  sections: ['featured', 'quiz', 'recipes', 'experience', 'story', 'branches', 'guide', 'brewing'],
   branches: [
     { name: 'جسر السويس — ألف مسكن', address: 'شارع جسر السويس، ألف مسكن', main: true },
     { name: 'مدينة نصر', address: 'شارع الطيران، بجوار كوك دور', main: false },
@@ -92,8 +93,46 @@ export function openDatabase(directory = process.env.DATA_DIR || './data') {
     );
     db.prepare('INSERT INTO variants VALUES(?,?,?,?,?,1)').run(randomUUID(), id, 250, 18000, 20);
     db.prepare('INSERT INTO variants VALUES(?,?,?,?,?,1)').run(randomUUID(), id, 500, 34000, 10);
+    seedPreviewSada(db);
   }
   return db;
+}
+
+// Explicit preview seed: called for a fresh catalog or manually after a backup.
+// Existing products, prices, stock and admin edits are never overwritten.
+export function seedPreviewSada(db) {
+  return transaction(db, () => {
+    const existing = db.prepare('SELECT * FROM products WHERE slug=?').get('dar-blend-sada');
+    if (existing) return { created: false, product: getProduct(db, existing) };
+    if (getSettings(db).mode !== 'preview')
+      throw new Error('لا يمكن إضافة منتج المعاينة السادة إلى متجر في وضع البيع الفعلي.');
+    const id = randomUUID();
+    const now = Date.now();
+    db.prepare('INSERT INTO products VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(
+      id,
+      'dar-blend-sada',
+      experienceCopy.plainProduct.name,
+      experienceCopy.plainProduct.description + ' ' + copy.product.demoNotice,
+      'غير محدد',
+      JSON.stringify(['تركي']),
+      'سادة',
+      JSON.stringify(['تركي ناعم', 'حبوب كاملة']),
+      '/images/coffee-sada-studio.webp',
+      1,
+      1,
+      1,
+      'units',
+      0,
+      now,
+      now,
+    );
+    db.prepare('INSERT INTO variants VALUES(?,?,?,?,?,1)').run(randomUUID(), id, 250, 18000, 20);
+    db.prepare('INSERT INTO variants VALUES(?,?,?,?,?,1)').run(randomUUID(), id, 500, 34000, 10);
+    return {
+      created: true,
+      product: getProduct(db, db.prepare('SELECT * FROM products WHERE id=?').get(id)),
+    };
+  });
 }
 
 export function transaction(db, fn) {

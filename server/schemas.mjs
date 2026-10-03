@@ -9,7 +9,7 @@ export const productSchema = z
       .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
       .max(100),
     description: z.string().trim().min(1).max(4000),
-    roast: z.enum(['فاتح', 'وسط', 'غامق']),
+    roast: z.enum(['فاتح', 'وسط', 'غامق', 'غير محدد']),
     brew: z
       .array(z.enum(['تركي', 'إسبريسو', 'فلتر']))
       .min(1)
@@ -54,7 +54,20 @@ export const settingsSchema = z
     returnsPolicy: z.string().trim().max(8000),
     privacyPolicy: z.string().trim().max(8000),
     codEnabled: z.boolean(),
-    sections: z.array(z.enum(['brewing', 'featured', 'story', 'branches', 'guide'])).max(5),
+    sections: z
+      .array(
+        z.enum([
+          'brewing',
+          'featured',
+          'story',
+          'branches',
+          'guide',
+          'quiz',
+          'recipes',
+          'experience',
+        ]),
+      )
+      .max(8),
     branches: z
       .array(
         z.object({

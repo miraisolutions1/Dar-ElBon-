@@ -399,6 +399,25 @@ test('live mode requires actual configuration, canonical shipping fees and no de
   assert.equal(
     (await f.request('/admin/settings', { method: 'PUT', cookie: f.cookie, body: settings }))
       .status,
+    400,
+  );
+  for (const product of (await f.request('/store')).data.products) {
+    if (!product.demo) continue;
+    const update = await f.request(`/admin/products/${product.id}`, {
+      method: 'PUT',
+      cookie: f.cookie,
+      body: { ...product, demo: false },
+    });
+    assert.equal(update.status, 200);
+  }
+  assert.equal(
+    (
+      await f.request('/admin/settings', {
+        method: 'PUT',
+        cookie: f.cookie,
+        body: settings,
+      })
+    ).status,
     200,
   );
   const input = { ...f.order(), zoneId: 'real-zone', shipping: 0 };

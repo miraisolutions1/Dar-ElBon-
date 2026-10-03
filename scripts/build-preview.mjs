@@ -4,25 +4,54 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 const catalog = await (await fetch('http://127.0.0.1:3000/api/store')).json();
 if (catalog.settings.mode !== 'preview')
   throw new Error('Only demonstration data may be exported.');
-const hero =
-  'data:image/webp;base64,' +
-  readFileSync('public/images/coffee-tin-studio.webp').toString('base64');
-const cinematic =
-  'data:image/webp;base64,' +
-  readFileSync('public/images/coffee-cinematic.webp').toString('base64');
-const coffeeSheet =
-  'data:image/webp;base64,' + readFileSync('public/images/brewing-methods.webp').toString('base64');
-const story =
-  'data:image/webp;base64,' + readFileSync('public/images/coffee-story.webp').toString('base64');
-const journey =
-  'data:image/webp;base64,' + readFileSync('public/images/coffee-journey.webp').toString('base64');
-const logo =
-  'data:image/webp;base64,' + readFileSync('public/images/dar-logo.webp').toString('base64');
+// Inline each referenced public asset without changing which product uses it.
+// This also supports the yellow hero, sada tin, branch drinks, and recipe sheet.
+const assetCache = new Map();
+function inlineAsset(path) {
+  if (!path?.startsWith('/images/')) return path;
+  if (path.includes('..') || path.includes('\\'))
+    throw new Error('Unsafe public image path in preview catalog.');
+  if (assetCache.has(path)) return assetCache.get(path);
+  const mime = {
+    webp: 'image/webp',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    svg: 'image/svg+xml',
+  }[path.split('.').pop()?.toLowerCase()];
+  if (!mime) throw new Error(`Unsupported preview image: ${path}`);
+  const data = `data:${mime};base64,${readFileSync('public' + path).toString('base64')}`;
+  assetCache.set(path, data);
+  return data;
+}
+catalog.settings.heroImage = inlineAsset(catalog.settings.heroImage);
+catalog.products.forEach((product) => {
+  product.image = inlineAsset(product.image);
+});
+const logo = inlineAsset('/images/dar-logo.webp');
 const admin = existsSync('.local/screenshots/admin-desktop.png')
   ? 'data:image/png;base64,' +
     readFileSync('.local/screenshots/admin-desktop.png').toString('base64')
   : '';
 const json = (value) => JSON.stringify(value).replaceAll('<', '\\u003c');
+function inlineSourceImages(source) {
+  return (
+    source
+      // Background-image strings need their URL embedded too.
+      .replace(
+        /url\((['"]?)(\/images\/[^)'"\s]+)\1\)/g,
+        (_, _quote, path) => `url(${inlineAsset(path)})`,
+      )
+      // JSX attributes need braces when their quoted URL becomes a data URL.
+      .replace(
+        /\b(src|poster)=(['"])(\/images\/[^'"<>]+)\2/g,
+        (_, attribute, _quote, path) => `${attribute}={${json(inlineAsset(path))}}`,
+      )
+      // Constants and React style objects use ordinary JavaScript strings.
+      .replace(/(['"])(\/images\/[^'"<>]+)\1/g, (_, _quote, path) => json(inlineAsset(path)))
+  );
+}
+
 const entry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -31,11 +60,8 @@ import '@fontsource-variable/cairo';
 import './src/styles.css';
 import './src/storefront-theme.css';
 import { StoreProvider, CartProvider } from './src/lib';
-import { StoreLayout, Home, Shop, ProductPage, CartPage, Guide, About, BranchesPage, Policy, NotFound } from './src/storefront';
+import { StoreLayout, Home, Shop, ProductPage, CartPage, Guide, About, BranchesPage, QuizPage, RecipesPage, Policy, NotFound } from './src/storefront';
 const catalog = ${json(catalog)};
-const hero = ${json(hero)};
-catalog.settings.heroImage = ${json(cinematic)};
-catalog.products.forEach(product => product.image = hero);
 window.fetch = async (input) => {
   const path = new URL(String(input), 'https://preview.example').pathname;
   return new Response(JSON.stringify(path === '/api/store' ? catalog : {error:'هذه معاينة للتصميم فقط.'}), {
@@ -73,6 +99,8 @@ createRoot(document.getElementById('root')).render(
     <Route path="guide" element={<Guide />} />
     <Route path="about" element={<About />} />
     <Route path="branches" element={<BranchesPage />} />
+    <Route path="quiz" element={<QuizPage />} />
+    <Route path="learn" element={<RecipesPage />} />
     <Route path="policies/:type" element={<Policy />} />
     <Route path="admin/*" element={<AdminPreview />} />
     <Route path="*" element={<NotFound />} />
@@ -95,24 +123,16 @@ const result = await build({
     {
       name: 'preview-copy',
       setup(builder) {
-        builder.onLoad({ filter: /src\/storefront\.tsx$/ }, (args) => ({
-          contents: readFileSync(args.path, 'utf8')
-            .replace(
+        builder.onLoad(
+          { filter: /src\/(?:storefront|components|coffee-experience)\.tsx$/ },
+          (args) => ({
+            contents: inlineSourceImages(readFileSync(args.path, 'utf8')).replace(
               'المتجر في وضع المعاينة · الأسعار والطلبات تجريبية',
               'معاينة تفاعلية للتصميم · الأسعار توضيحية · لا يتم إرسال طلبات',
-            )
-            .replace("'/images/brewing-methods.webp'", json(coffeeSheet))
-            .replace('src="/images/coffee-story.webp"', 'src={' + json(story) + '}')
-            .replace('src="/images/coffee-journey.webp"', 'src={' + json(journey) + '}'),
-          loader: 'tsx',
-        }));
-        builder.onLoad({ filter: /src\/components\.tsx$/ }, (args) => ({
-          contents: readFileSync(args.path, 'utf8').replace(
-            'src="/images/dar-logo.webp"',
-            'src={' + json(logo) + '}',
-          ),
-          loader: 'tsx',
-        }));
+            ),
+            loader: 'tsx',
+          }),
+        );
         builder.onLoad({ filter: /src\/lib\.tsx$/ }, (args) => ({
           contents: readFileSync(args.path, 'utf8').replaceAll(
             'dar-cart-v2',

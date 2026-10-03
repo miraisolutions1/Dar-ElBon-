@@ -864,7 +864,7 @@ export function ProductEditor() {
                 <label className="field">
                   التحميص
                   <select value={product.roast} onChange={(e) => patch('roast', e.target.value)}>
-                    {['فاتح', 'وسط', 'غامق'].map((r) => (
+                    {['غير محدد', 'فاتح', 'وسط', 'غامق'].map((r) => (
                       <option key={r}>{r}</option>
                     ))}
                   </select>
@@ -1123,6 +1123,9 @@ export function SettingsPage({ contentOnly = false }: { contentOnly?: boolean })
   }
   const sectionNames: Record<string, string> = {
     brewing: 'اختيار طريقة التحضير',
+    quiz: 'اختبار اختيار الفنجان',
+    recipes: 'كروت التحضير',
+    experience: 'مشروبات الفروع',
     featured: 'المنتجات المميزة',
     story: 'حكاية دار البن',
     branches: 'فروع دار البن',

@@ -1,4 +1,6 @@
 import copy from '../content/site-copy-ar.json';
+import experience from '../content/coffee-experience-ar.json';
+import { TasteQuiz, RecipeCards, BranchDrinks } from './coffee-experience';
 import { useState, useEffect, type FormEvent } from 'react';
 import {
   Link,
@@ -156,10 +158,10 @@ export function StoreLayout() {
             <Link to="/" aria-label="دار البن — الرئيسية">
               <Brand />
             </Link>
-            <p className="header-note">{copy.brand.headerNote}</p>
+            <p className="header-note">{experience.header.note}</p>
             <div className="header-actions">
-              <Link className="header-guide" to="/guide">
-                دليل اختيار القهوة <ArrowLeft size={15} />
+              <Link className="header-guide" to="/quiz">
+                {experience.header.quizCta} <ArrowLeft size={15} />
               </Link>
               <button
                 className="icon-button search-toggle"
@@ -318,6 +320,9 @@ export function Home() {
   const coffeeSheet = '/images/brewing-methods.webp';
   const sections: Record<string, React.ReactNode> = {
     branches: <Branches />,
+    quiz: <TasteQuiz products={products} />,
+    recipes: <RecipeCards />,
+    experience: <BranchDrinks />,
     brewing: (
       <section className="container section coffee-selection">
         <SectionTitle eyebrow={copy.brewing.eyebrow} title={copy.brewing.title} />
@@ -1146,6 +1151,14 @@ export function Guide() {
         <h1>{copy.guide.title}</h1>
         <p>{copy.guide.intro}</p>
       </div>
+      <div className="section-action">
+        <Link className="btn" to="/quiz">
+          اكتشف فنجانك في ٣ أسئلة
+        </Link>
+        <Link className="btn secondary" to="/learn">
+          كروت تحضير القهوة
+        </Link>
+      </div>
       <div className="guide-steps">
         <fieldset className="panel">
           <legend>{copy.guide.brewStep}</legend>
@@ -1217,6 +1230,7 @@ export function BranchesPage() {
   return (
     <div className="page-space">
       <Branches />
+      <BranchDrinks />
       <div className="container branch-social">
         <SocialLinks />
       </div>
@@ -1307,6 +1321,22 @@ export function NotFound() {
           ارجع للرئيسية <ArrowLeft size={17} />
         </Link>
       </Empty>
+    </div>
+  );
+}
+
+export function QuizPage() {
+  const { products } = useStore();
+  return (
+    <div className="page-space">
+      <TasteQuiz products={products} />
+    </div>
+  );
+}
+export function RecipesPage() {
+  return (
+    <div className="page-space">
+      <RecipeCards />
     </div>
   );
 }

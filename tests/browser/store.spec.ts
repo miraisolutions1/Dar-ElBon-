@@ -176,3 +176,53 @@ test('home separates branch visits from buying beans and explains methods withou
     page.getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي', exact: true }),
   ).toBeVisible();
 });
+
+test('coffee quiz matches available beans, preserves answers, and opens the recommended weight', async ({
+  page,
+}) => {
+  await page.goto('/quiz');
+  const next = page.getByRole('button', { name: 'السؤال اللي بعده' });
+  await expect(next).toBeDisabled();
+  await page.getByRole('radio', { name: /ركوة/ }).check();
+  await next.click();
+  await page.getByRole('radio', { name: /^سادة/ }).check();
+  await page.getByRole('button', { name: 'السؤال اللي قبله' }).click();
+  await expect(page.getByRole('radio', { name: /ركوة/ })).toBeChecked();
+  await next.click();
+  await expect(page.getByRole('radio', { name: /^سادة/ })).toBeChecked();
+  await next.click();
+  await page.getByRole('radio', { name: /القهوة للّمة/ }).check();
+  await page.getByRole('button', { name: 'شوف اختياراتك' }).click();
+  await expect(page.locator('.quiz-result .product-card')).toHaveCount(1);
+  await expect(page.locator('.quiz-result')).toContainText('سادة');
+  await page.getByRole('link', { name: /اختيار بن دار البن البرازيلي — سادة — 500 جم/ }).click();
+  await expect(page).toHaveURL(/dar-blend-sada\?variant=/);
+  await expect(page.getByRole('button', { name: '500 جم', exact: true })).toHaveClass(/selected/);
+});
+
+test('unavailable quiz method has no false recommendation and preparation cards work on mobile', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.goto('/quiz');
+  await page.getByRole('radio', { name: /ماكينة إسبريسو/ }).check();
+  await page.getByRole('button', { name: 'السؤال اللي بعده' }).click();
+  await page.getByRole('radio', { name: /لسه بكتشف/ }).check();
+  await page.getByRole('button', { name: 'السؤال اللي بعده' }).click();
+  await page.getByRole('radio', { name: /بجرّب التوليفة/ }).check();
+  await page.getByRole('button', { name: 'شوف اختياراتك' }).click();
+  await expect(page.locator('.quiz-result .product-card')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'لسه مفيش توليفة تجمع اختياراتك' })).toBeVisible();
+  await page.getByRole('button', { name: 'جرّب اختيارات تانية' }).click();
+  await expect(page.getByRole('button', { name: 'السؤال اللي بعده' })).toBeDisabled();
+  await page.goto('/learn');
+  await expect(page.locator('.recipe-card')).toHaveCount(3);
+  const recipe = page.locator('.recipe-card').first();
+  await recipe.locator('summary').click();
+  await expect(recipe.locator('details')).toHaveAttribute('open', '');
+  await expect(recipe.getByRole('list')).toHaveCount(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.goto('/branches');
+  await expect(page.locator('.branch-drink-card')).toHaveCount(3);
+  await expect(page.locator('.branch-drink-card .product-select')).toHaveCount(0);
+});

@@ -1,5 +1,7 @@
 /* The original cinematic direction: full-width imagery, ivory and restrained gold. */
 .storefront {
+  --brand-yellow: #ffd200;
+  --brand-yellow-soft: #fff3ae;
   --cream: #faf7f0;
   --paper: #fffdf8;
   --ink: #302218;
@@ -72,7 +74,7 @@
   color: #8e5c1d;
 }
 .storefront .site-nav a.active:after {
-  background: #d6ad50;
+  background: #ffd200;
   width: 100%;
   height: 2px;
   bottom: 0;
@@ -84,7 +86,7 @@
   color: #332218;
 }
 .storefront .cart-link > span {
-  background: #dfb540;
+  background: #ffd200;
   color: #281c13;
 }
 .storefront .desktop-search {
@@ -116,17 +118,17 @@
 }
 .storefront .btn {
   border-radius: 7px;
-  background: #e7bb42;
+  background: #ffd200;
   color: #24180f;
-  border-color: #e7bb42;
+  border-color: #ffd200;
   min-height: 49px;
   padding: 12px 25px;
   font-size: 13px;
   font-weight: 750;
 }
 .storefront .btn:hover {
-  background: #f2cf62;
-  border-color: #f2cf62;
+  background: #ffdf42;
+  border-color: #ffdf42;
 }
 .storefront .btn.secondary {
   background: transparent;
@@ -1884,5 +1886,592 @@
   }
   .storefront .method-note p {
     font-size: 14px;
+  }
+}
+
+/* The brand's distinctive yellow: bright accents anchored by espresso brown. */
+.storefront .section-heading h2:before,
+.storefront .section-heading h2:after {
+  height: 2px;
+  background: var(--brand-yellow);
+}
+.storefront .product-info small {
+  background: #fff4b8;
+  border-color: #e8cd64;
+  color: #4f3716;
+}
+.storefront .product-select {
+  border-color: #d6b51e;
+  color: #4b3517;
+}
+.storefront .product-select:hover {
+  background: var(--brand-yellow);
+  border-color: var(--brand-yellow);
+}
+.storefront .branch-card {
+  border-top-color: var(--brand-yellow);
+}
+.storefront .coffee-note {
+  border-top-color: #e3c228;
+}
+.storefront .guide-banner {
+  background: #fff1a4;
+  border-color: #efd867;
+}
+.storefront .guide-banner .guide-icon {
+  background: var(--brand-yellow);
+  color: #4a3217;
+}
+.storefront .brew-card:hover {
+  border-color: #d9b100;
+  box-shadow: 0 9px 22px #59471c0d;
+}
+.storefront .taste-quiz {
+  margin-block: 20px 36px;
+  position: relative;
+  border: 1px solid #ead673;
+  border-radius: 12px;
+  background: #fff7d2;
+  overflow: hidden;
+  padding: clamp(25px, 4vw, 52px);
+}
+.storefront .taste-quiz:before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+  width: 7px;
+  height: 100%;
+  background: var(--brand-yellow);
+}
+.storefront .taste-quiz .eyebrow {
+  color: #6f5118;
+  font-size: 12px;
+  font-weight: 750;
+}
+.storefront .taste-quiz h2 {
+  color: #302218;
+  font-size: clamp(27px, 3vw, 38px);
+  font-weight: 900;
+  line-height: 1.65;
+  margin-bottom: 12px;
+}
+.storefront .taste-quiz > p,
+.storefront .taste-quiz .quiz-intro {
+  max-width: 720px;
+  color: #6c573a;
+  font-size: 15px;
+  line-height: 1.9;
+}
+.storefront .quiz-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-block: 24px;
+  color: #695023;
+  font-size: 12px;
+  font-weight: 750;
+}
+.storefront .quiz-progress > span,
+.storefront .quiz-progress > i {
+  display: block;
+  flex: 1;
+  max-width: 90px;
+  height: 6px;
+  border-radius: 3px;
+  background: #e8dca5;
+}
+.storefront .quiz-progress > .active,
+.storefront .quiz-progress > .complete,
+.storefront .quiz-progress > [aria-current='step'] {
+  background: #a87a09;
+}
+.storefront .quiz-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 15px;
+  margin-block: 22px;
+}
+.storefront .quiz-options button,
+.storefront .quiz-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  text-align: start;
+  gap: 7px;
+  min-height: 112px;
+  padding: 22px 24px;
+  border: 1px solid #d9c690;
+  border-radius: 8px;
+  background: #fffdf7;
+  color: #3d2b16;
+  font-size: 16px;
+  line-height: 1.7;
+  font-weight: 750;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.storefront .quiz-options button small,
+.storefront .quiz-option small {
+  font-size: 12px;
+  font-weight: 500;
+  color: #725d3c;
+}
+.storefront .quiz-options button:hover {
+  border-color: #a58320;
+  background: #fff9e7;
+}
+.storefront .quiz-options button[aria-pressed='true'],
+.storefront .quiz-options button.selected {
+  border-color: #a47a08;
+  background: var(--brand-yellow);
+  color: #2b2010;
+}
+.storefront .quiz-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 15px;
+  margin-top: 24px;
+}
+.storefront .quiz-result {
+  padding: 28px;
+  background: #fffdf7;
+  border: 1px solid #e2cc6c;
+  border-inline-start: 5px solid #ffd200;
+  border-radius: 8px;
+  margin-block: 22px;
+}
+.storefront .quiz-result h3 {
+  color: #302218;
+  font-size: 26px;
+  font-weight: 850;
+  margin-bottom: 12px;
+}
+.storefront .quiz-result p {
+  font-size: 14px;
+  line-height: 2;
+  max-width: 760px;
+  color: #6c573a;
+}
+.storefront .quiz-result .btn {
+  margin-top: 17px;
+}
+.storefront .recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 23px;
+  margin-block: 28px;
+}
+.storefront .recipe-card {
+  border: 1px solid #e5dac4;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fffdf8;
+}
+.storefront .recipe-photo {
+  position: relative;
+  aspect-ratio: 1.12;
+  background-color: #f5edda;
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+  overflow: hidden;
+}
+.storefront .recipe-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.storefront .recipe-card > h3,
+.storefront .recipe-card > p {
+  margin-inline: 25px;
+}
+.storefront .recipe-card h3 {
+  font-size: 23px;
+  font-weight: 850;
+  line-height: 1.7;
+  margin-top: 22px;
+  margin-bottom: 10px;
+}
+.storefront .recipe-card p {
+  font-size: 13px;
+  line-height: 1.95;
+  color: #75634f;
+}
+.storefront .recipe-body {
+  padding: 22px 25px 26px;
+}
+.storefront .recipe-body h3 {
+  margin-top: 0;
+}
+.storefront .recipe-steps {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  margin: 18px 25px 26px;
+  counter-reset: recipe;
+  list-style: none;
+}
+.storefront .recipe-body .recipe-steps {
+  margin-inline: 0;
+  margin-bottom: 0;
+}
+.storefront .recipe-steps li {
+  position: relative;
+  counter-increment: recipe;
+  padding-inline-start: 35px;
+  font-size: 13px;
+  line-height: 1.9;
+  color: #624e35;
+}
+.storefront .recipe-steps li:before {
+  content: counter(recipe);
+  position: absolute;
+  inset-inline-start: 0;
+  top: 2px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  background: #fff0a7;
+  color: #593e12;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 800;
+}
+.storefront .branch-experience {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  margin-block: 35px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--brand-yellow);
+  color: #2b2010;
+}
+.storefront .branch-experience > div {
+  padding: clamp(27px, 4vw, 52px);
+}
+.storefront .branch-experience h2 {
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 900;
+  line-height: 1.6;
+  margin-bottom: 18px;
+}
+.storefront .branch-experience p {
+  color: #56411e;
+  font-size: 15px;
+  line-height: 1.95;
+  margin-bottom: 23px;
+}
+.storefront .branch-experience > img {
+  height: 100%;
+  min-height: 340px;
+  width: 100%;
+  object-fit: cover;
+}
+.storefront .branch-experience .btn {
+  background: #302218;
+  border-color: #302218;
+  color: #fff8df;
+}
+.storefront .branch-experience .btn:hover {
+  background: #52371c;
+}
+@media (max-width: 1100px) {
+  .storefront .recipe-grid {
+    gap: 16px;
+  }
+  .storefront .recipe-card h3 {
+    font-size: 21px;
+  }
+  .storefront .recipe-body {
+    padding: 20px;
+  }
+}
+@media (max-width: 760px) {
+  .storefront .taste-quiz {
+    padding: 26px 22px;
+    margin-block: 14px 26px;
+  }
+  .storefront .taste-quiz h2 {
+    font-size: 28px;
+  }
+  .storefront .taste-quiz > p,
+  .storefront .taste-quiz .quiz-intro {
+    font-size: 13px;
+  }
+  .storefront .quiz-options {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .storefront .quiz-options button,
+  .storefront .quiz-option {
+    min-height: 82px;
+    font-size: 15px;
+    padding: 16px 19px;
+  }
+  .storefront .quiz-result {
+    padding: 22px 18px;
+  }
+  .storefront .quiz-result h3 {
+    font-size: 23px;
+  }
+  .storefront .recipe-grid {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .storefront .recipe-photo {
+    aspect-ratio: 1.35;
+  }
+  .storefront .recipe-card h3 {
+    font-size: 24px;
+  }
+  .storefront .recipe-body {
+    padding: 23px;
+  }
+  .storefront .recipe-steps li {
+    font-size: 14px;
+  }
+  .storefront .branch-experience {
+    grid-template-columns: 1fr;
+    margin-block: 24px;
+  }
+  .storefront .branch-experience > div {
+    padding: 28px 25px;
+  }
+  .storefront .branch-experience h2 {
+    font-size: 29px;
+  }
+  .storefront .branch-experience p {
+    font-size: 14px;
+  }
+  .storefront .branch-experience > img {
+    min-height: 0;
+    height: 265px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .storefront .quiz-options button {
+    transition: none;
+  }
+}
+
+/* Component details: radio choices, expandable recipes, and branch imagery. */
+.storefront .quiz-question {
+  border: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+.storefront .quiz-question legend {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.7;
+  padding: 0;
+  color: #3d2b16;
+  margin-bottom: 10px;
+}
+.storefront .quiz-question > p {
+  font-size: 14px;
+}
+.storefront .quiz-option {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+}
+.storefront .quiz-option input {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin: 0;
+  accent-color: #634411;
+}
+.storefront .quiz-option > span {
+  flex: 1;
+}
+.storefront .quiz-option strong,
+.storefront .quiz-option small {
+  display: block;
+}
+.storefront .quiz-option strong {
+  font-size: 16px;
+  line-height: 1.7;
+  margin-bottom: 5px;
+}
+.storefront .quiz-option small {
+  font-size: 12px;
+  line-height: 1.8;
+}
+.storefront .quiz-option.selected {
+  background: var(--brand-yellow);
+  border-color: #a47b0a;
+}
+.storefront .quiz-option:focus-within {
+  outline: 3px solid #795020;
+  outline-offset: 3px;
+}
+.storefront .quiz-options .quiz-option:hover {
+  border-color: #a58320;
+}
+.storefront .quiz-actions .btn:disabled {
+  background: #e7ddaf;
+  border-color: #e7ddaf;
+  color: #716955;
+  opacity: 1;
+  cursor: not-allowed;
+}
+.storefront .quiz-result-products {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  max-width: 740px;
+  margin-block: 24px;
+}
+.storefront .quiz-restart {
+  margin-top: 22px;
+  background: transparent;
+  border: 0;
+  padding: 8px 0;
+  cursor: pointer;
+}
+.storefront .recipe-copy {
+  padding: 24px 25px 28px;
+}
+.storefront .recipe-copy h3 {
+  margin-top: 7px;
+}
+.storefront .recipe-copy > .eyebrow {
+  display: inline-block;
+  color: #694813;
+  background: #fff0a3;
+  padding: 3px 9px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+.storefront .recipe-copy details {
+  margin-top: 19px;
+  border-top: 1px solid #e5d8bf;
+}
+.storefront .recipe-copy summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-block: 17px 4px;
+  list-style: none;
+  font-size: 14px;
+  color: #594012;
+  font-weight: 750;
+}
+.storefront .recipe-copy summary::-webkit-details-marker {
+  display: none;
+}
+.storefront .recipe-copy details[open] summary svg {
+  transform: rotate(180deg);
+}
+.storefront .recipe-details {
+  padding-top: 18px;
+}
+.storefront .recipe-details h4 {
+  font-size: 14px;
+  font-weight: 800;
+  margin-block: 20px 10px;
+}
+.storefront .recipe-details ul,
+.storefront .recipe-details ol {
+  padding-inline-start: 20px;
+  font-size: 13px;
+  line-height: 1.9;
+  color: #624e35;
+}
+.storefront .recipe-details li {
+  margin-block: 8px;
+}
+.storefront .recipe-details li::marker {
+  color: #936f15;
+  font-weight: 800;
+}
+.storefront .recipe-tip {
+  border-inline-start: 3px solid #ffd200;
+  padding: 12px 14px;
+  margin-top: 20px;
+  background: #fff6d0;
+}
+.storefront .branch-drinks-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 23px;
+  margin-top: 28px;
+}
+.storefront .branch-drink-card {
+  overflow: hidden;
+  border: 1px solid #e7d59c;
+  border-radius: 10px;
+  background: #fff9e3;
+}
+.storefront .branch-drink-photo {
+  aspect-ratio: 1;
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+  background-color: #fff0a3;
+}
+.storefront .branch-drink-copy {
+  border-top: 3px solid var(--brand-yellow);
+  padding: 23px 25px;
+}
+.storefront .branch-drink-copy h3 {
+  font-size: 23px;
+  font-weight: 850;
+  line-height: 1.7;
+  margin-bottom: 10px;
+}
+.storefront .branch-drink-copy p {
+  font-size: 14px;
+  line-height: 1.9;
+  color: #6c573a;
+}
+.storefront .drink-image-caption {
+  font-size: 12px;
+  color: #75634f;
+  text-align: center;
+  line-height: 1.9;
+  margin-top: 16px;
+}
+@media (max-width: 1100px) {
+  .storefront .branch-drinks-grid {
+    gap: 16px;
+  }
+  .storefront .branch-drink-copy {
+    padding: 20px;
+  }
+  .storefront .branch-drink-copy h3 {
+    font-size: 21px;
+  }
+}
+@media (max-width: 760px) {
+  .storefront .quiz-question legend {
+    font-size: 20px;
+  }
+  .storefront .quiz-result-products {
+    grid-template-columns: 1fr;
+  }
+  .storefront .recipe-copy {
+    padding: 23px;
+  }
+  .storefront .branch-drinks-grid {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .storefront .branch-drink-photo {
+    aspect-ratio: 1.25;
+  }
+  .storefront .branch-drink-copy {
+    padding: 23px;
   }
 }
