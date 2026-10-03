@@ -1,0 +1,320 @@
+.blend-builder {
+  max-width: 1000px;
+  margin: 56px auto;
+  color: #342419;
+  font-family: inherit;
+}
+.blend-builder * {
+  box-sizing: border-box;
+}
+.blend-builder .bb-heading {
+  max-width: 690px;
+  margin: 0 auto 22px;
+  text-align: center;
+}
+.blend-builder .bb-eyebrow {
+  color: #86612d;
+  font-size: 12px;
+  font-weight: 750;
+}
+.blend-builder .bb-heading h1,
+.blend-builder .bb-heading h2 {
+  margin: 8px 0 10px;
+  font-size: clamp(27px, 4vw, 42px);
+  font-weight: 850;
+  line-height: 1.5;
+}
+.blend-builder p {
+  line-height: 1.9;
+  font-size: 14px;
+}
+.blend-builder .bb-preview-note {
+  padding: 15px 20px;
+  margin-bottom: 24px;
+  background: #fff4ce;
+  border: 1px solid #e5cc86;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.85;
+}
+.blend-builder .bb-origin-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.blend-builder .bb-origin {
+  padding: 22px;
+  border: 1px solid #e8ddce;
+  border-radius: 16px;
+  background: #fffdf8;
+}
+.blend-builder .bb-origin-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  color: #816849;
+}
+.blend-builder .bb-origin h3 {
+  margin: 17px 0 8px;
+  font-size: 21px;
+  font-weight: 800;
+}
+.blend-builder .bb-origin p {
+  min-height: 78px;
+  color: #756553;
+  font-size: 13px;
+  margin: 0 0 18px;
+}
+.blend-builder .bb-quantity {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.blend-builder .bb-quantity button {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #decfae;
+  border-radius: 9px;
+  background: #fcf0d4;
+  color: #493018;
+  cursor: pointer;
+}
+.blend-builder button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.blend-builder .bb-quantity label {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid #dfd3c2;
+  border-radius: 9px;
+  background: #fff;
+  padding: 0 7px;
+}
+.blend-builder .bb-quantity input {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  text-align: center;
+  font: inherit;
+  font-weight: 800;
+  color: inherit;
+}
+.blend-builder .bb-quantity small {
+  font-size: 11px;
+  color: #897455;
+}
+.blend-builder .bb-input-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.blend-builder .bb-origin-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 17px;
+  font-size: 10px;
+  color: #897455;
+}
+.blend-builder .bb-traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: -5px 0 18px;
+}
+.blend-builder .bb-traits span {
+  border-radius: 6px;
+  padding: 4px 7px;
+  background: #f5eddd;
+  font-size: 10px;
+  color: #6c5337;
+}
+.blend-builder .bb-origin-total strong {
+  font-size: 15px;
+  color: #513820;
+}
+.blend-builder .bb-summary {
+  margin-top: 22px;
+  padding: 26px;
+  background: #f5e8c8;
+  border: 1px solid #ddc792;
+  border-radius: 16px;
+}
+.blend-builder .bb-summary-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+.blend-builder .bb-summary-heading h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 850;
+}
+.blend-builder .bb-summary-heading span {
+  font-size: 11px;
+  color: #826d4c;
+}
+.blend-builder .bb-totals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin: 22px 0;
+}
+.blend-builder .bb-totals > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.blend-builder .bb-totals span {
+  font-size: 12px;
+  color: #7a6342;
+}
+.blend-builder .bb-totals strong {
+  font-size: clamp(23px, 3.5vw, 32px);
+  font-weight: 850;
+}
+.blend-builder .bb-totals small {
+  font-size: 14px;
+}
+.blend-builder .bb-share-bar {
+  display: flex;
+  height: 16px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #e1d1b1;
+}
+.blend-builder .bb-share-bar span {
+  display: block;
+  transition: width 0.2s;
+}
+.blend-builder .bb-share-labels {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding: 0;
+  margin: 13px 0;
+}
+.blend-builder .bb-share-labels li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+}
+.blend-builder .bb-share-labels i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.blend-builder .bb-composition {
+  color: #7a6240;
+  font-size: 12px;
+}
+.blend-builder .bb-empty {
+  padding: 8px 0;
+  color: #755a38;
+}
+.blend-builder .bb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 15px;
+  margin-top: 22px;
+}
+.blend-builder .bb-actions button {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 10px 18px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.blend-builder .bb-save {
+  background: #edbd38;
+  border: 1px solid #cea02a;
+  color: #3a2716;
+}
+.blend-builder .bb-reset {
+  background: transparent;
+  border: 1px solid #b9a477;
+  color: #5f4828;
+}
+.blend-builder .bb-save-message {
+  min-height: 22px;
+  font-size: 12px;
+  margin: 10px 0 0;
+}
+.blend-builder .bb-taste-notes {
+  margin-top: 24px;
+  border-top: 1px solid #e3d8c9;
+  padding: 20px 4px 0;
+  color: #756451;
+}
+.blend-builder .bb-taste-notes h3 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #513c29;
+  margin: 0 0 10px;
+}
+.blend-builder .bb-taste-notes p {
+  font-size: 12px;
+  margin: 8px 0;
+}
+.blend-builder button:focus-visible,
+.blend-builder input:focus-visible {
+  outline: 3px solid #936d22;
+  outline-offset: 3px;
+}
+@media (max-width: 650px) {
+  .blend-builder {
+    margin: 36px auto;
+  }
+  .blend-builder .bb-origin-grid {
+    grid-template-columns: 1fr;
+  }
+  .blend-builder .bb-origin {
+    padding: 20px;
+  }
+  .blend-builder .bb-origin p {
+    min-height: 0;
+    margin-bottom: 16px;
+  }
+  .blend-builder .bb-summary {
+    padding: 20px;
+  }
+  .blend-builder .bb-share-labels {
+    gap: 12px;
+  }
+  .blend-builder .bb-actions {
+    gap: 10px;
+  }
+  .blend-builder .bb-actions button {
+    flex: 1 1 150px;
+  }
+}

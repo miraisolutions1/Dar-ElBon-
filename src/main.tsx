@@ -6,6 +6,7 @@ import '@fontsource-variable/noto-naskh-arabic';
 import '@fontsource-variable/cairo';
 import './styles.css';
 import './storefront-theme.css';
+import './header-theme.css';
 import { StoreProvider, CartProvider } from './lib';
 import {
   StoreLayout,
@@ -17,6 +18,7 @@ import {
   OrderPage,
   Guide,
   QuizPage,
+  BlendPage,
   RecipesPage,
   About,
   BranchesPage,
@@ -70,6 +72,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="order/:token" element={<OrderPage />} />
               <Route path="guide" element={<Guide />} />
               <Route path="quiz" element={<QuizPage />} />
+              <Route path="blend" element={<BlendPage />} />
               <Route path="learn" element={<RecipesPage />} />
               <Route path="about" element={<About />} />
               <Route path="branches" element={<BranchesPage />} />

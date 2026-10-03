@@ -133,7 +133,11 @@ test('header search and mobile navigation keep the active panel consistent', asy
       .locator('.site-header .brand-logo')
       .evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0),
   ).toBe(true);
-  await page.getByLabel('ابحث عن قهوتك').fill('محوج');
+  await expect(page.locator('.preview-bar')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'إدارة المتجر' })).toHaveCount(0);
+  await expect(page.locator('.developer-credit')).toContainText('Mirai Solutions');
+  await page.getByRole('button', { name: 'البحث في القهوة' }).click();
+  await page.getByLabel('كلمة البحث').fill('محوج');
   await page.getByRole('button', { name: 'بحث', exact: true }).click();
   await expect(page).toHaveURL(/shop\?q=/);
   await expect(
@@ -181,18 +185,18 @@ test('coffee quiz matches available beans, preserves answers, and opens the reco
   page,
 }) => {
   await page.goto('/quiz');
-  const next = page.getByRole('button', { name: 'السؤال اللي بعده' });
+  const next = page.getByRole('button', { name: 'التالي' });
   await expect(next).toBeDisabled();
-  await page.getByRole('radio', { name: /ركوة/ }).check();
+  await page.getByRole('radio', { name: /كنكة/ }).check();
   await next.click();
   await page.getByRole('radio', { name: /^سادة/ }).check();
-  await page.getByRole('button', { name: 'السؤال اللي قبله' }).click();
-  await expect(page.getByRole('radio', { name: /ركوة/ })).toBeChecked();
+  await page.getByRole('button', { name: 'رجوع' }).click();
+  await expect(page.getByRole('radio', { name: /كنكة/ })).toBeChecked();
   await next.click();
   await expect(page.getByRole('radio', { name: /^سادة/ })).toBeChecked();
   await next.click();
   await page.getByRole('radio', { name: /القهوة للّمة/ }).check();
-  await page.getByRole('button', { name: 'شوف اختياراتك' }).click();
+  await page.getByRole('button', { name: 'شوف الترشيح' }).click();
   await expect(page.locator('.quiz-result .product-card')).toHaveCount(1);
   await expect(page.locator('.quiz-result')).toContainText('سادة');
   await page.getByRole('link', { name: /اختيار بن دار البن البرازيلي — سادة — 500 جم/ }).click();
@@ -206,15 +210,15 @@ test('unavailable quiz method has no false recommendation and preparation cards 
   await page.setViewportSize({ width: 320, height: 800 });
   await page.goto('/quiz');
   await page.getByRole('radio', { name: /ماكينة إسبريسو/ }).check();
-  await page.getByRole('button', { name: 'السؤال اللي بعده' }).click();
+  await page.getByRole('button', { name: 'التالي' }).click();
   await page.getByRole('radio', { name: /لسه بكتشف/ }).check();
-  await page.getByRole('button', { name: 'السؤال اللي بعده' }).click();
+  await page.getByRole('button', { name: 'التالي' }).click();
   await page.getByRole('radio', { name: /بجرّب التوليفة/ }).check();
-  await page.getByRole('button', { name: 'شوف اختياراتك' }).click();
+  await page.getByRole('button', { name: 'شوف الترشيح' }).click();
   await expect(page.locator('.quiz-result .product-card')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'لسه مفيش توليفة تجمع اختياراتك' })).toBeVisible();
-  await page.getByRole('button', { name: 'جرّب اختيارات تانية' }).click();
-  await expect(page.getByRole('button', { name: 'السؤال اللي بعده' })).toBeDisabled();
+  await page.getByRole('button', { name: 'ابدأ من جديد' }).click();
+  await expect(page.getByRole('button', { name: 'التالي' })).toBeDisabled();
   await page.goto('/learn');
   await expect(page.locator('.recipe-card')).toHaveCount(3);
   const recipe = page.locator('.recipe-card').first();
@@ -225,4 +229,89 @@ test('unavailable quiz method has no false recommendation and preparation cards 
   await page.goto('/branches');
   await expect(page.locator('.branch-drink-card')).toHaveCount(3);
   await expect(page.locator('.branch-drink-card .product-select')).toHaveCount(0);
+});
+
+test('quiz groups the question, selected answer, and stable navigation on mobile', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/quiz');
+  await expect(page.getByRole('heading', { level: 1, name: 'إيه فنجانك النهارده؟' })).toBeVisible();
+  const next = page.getByRole('button', { name: 'التالي', exact: true });
+  const initial = await next.boundingBox();
+  expect(initial!.y + initial!.height).toBeLessThanOrEqual(844);
+  await page.getByRole('radio', { name: /كنكة/ }).check();
+  await next.click();
+  await expect(page.locator('.quiz-answer-chip')).toContainText('كنكة');
+  const after = await next.boundingBox();
+  expect(Math.abs(after!.y - initial!.y)).toBeLessThan(45);
+  await expect(page.getByRole('button', { name: 'رجوع', exact: true })).toBeVisible();
+  await expect(page.locator('.quiz-stepper [aria-current="step"]')).toContainText('نوع البن');
+});
+
+test('blend calculator updates weight, price, shares, and saves a preview without creating an order', async ({
+  page,
+}) => {
+  await page.goto('/shop');
+  await page.locator('.blend-shop-banner').click();
+  await expect(page).toHaveURL(/\/blend$/);
+  await expect(
+    page.getByRole('heading', { name: 'كوّن توليفتك', exact: true, level: 1 }),
+  ).toBeVisible();
+  const quantity = (name: string) => page.getByRole('spinbutton', { name: `كمية ${name} بالجرام` });
+  await expect(quantity('برازيلي')).toHaveValue('150');
+  await page.getByRole('button', { name: 'زيادة كمية البن إثيوبي 50 جم' }).click();
+  await expect(quantity('إثيوبي')).toHaveValue('50');
+  await expect(page.locator('.bb-totals')).toContainText('300');
+  await expect(page.locator('.bb-totals')).toContainText('٢٨٠');
+  await page.getByRole('button', { name: 'احفظ وصفة المعاينة' }).click();
+  await expect(page.getByRole('status')).toContainText('اتحفظت');
+  const recipe = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem('dar-coffee-preview-blend')!),
+  );
+  expect(recipe.amounts).toEqual({ brazil: 150, colombia: 100, ethiopia: 50 });
+  await page.reload();
+  await page.getByRole('button', { name: 'حمّل الوصفة المحفوظة' }).click();
+  await expect(quantity('إثيوبي')).toHaveValue('50');
+  for (const name of ['برازيلي', 'كولومبي', 'إثيوبي']) await quantity(name).fill('0');
+  await quantity('إثيوبي').blur();
+  await expect(page.getByRole('button', { name: 'احفظ وصفة المعاينة' })).toBeDisabled();
+  await expect(page.locator('.bb-empty')).toBeVisible();
+  await page.setViewportSize({ width: 320, height: 800 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('pickup checkout stores the selected branch and shows it in the secure admin account', async ({
+  page,
+}) => {
+  await page.goto('/shop');
+  await page.getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي', exact: true }).click();
+  await page.getByRole('button', { name: 'أضف للسلة', exact: true }).click();
+  await page.getByRole('link', { name: /راجع السلة/ }).click();
+  await page.getByRole('link', { name: 'كمّل الطلب', exact: true }).click();
+  await page.getByRole('radio', { name: 'استلام من الفرع', exact: true }).check();
+  await expect(page.getByLabel('العنوان بالتفصيل')).toHaveCount(0);
+  await page.getByLabel('الاسم بالكامل').fill('عميل استلام الفرع');
+  await page.getByLabel('رقم الموبايل').fill('01012345678');
+  await page.getByLabel('فرع الاستلام').selectOption('1');
+  await page.getByRole('button', { name: 'تأكيد الطلب التجريبي' }).click();
+  await expect(page).toHaveURL(/\/order\/[a-f0-9]{64}$/);
+  await expect(page.locator('.pickup-confirmation')).toContainText('مدينة نصر');
+  const reference = await page.locator('.order-success strong').textContent();
+  await page.goto('/admin/login');
+  await page.getByLabel('اسم الدخول').fill('browser.tester');
+  await page.getByLabel('كلمة المرور', { exact: true }).fill('Browser-test-only-3948!');
+  await page.getByRole('button', { name: 'دخول لوحة الإدارة' }).click();
+  await page.getByRole('link', { name: reference!.trim(), exact: true }).click();
+  await expect(page.getByRole('heading', { name: /الاستلام من فرع.*مدينة نصر/ })).toBeVisible();
+  await expect(page.getByText('شارع الطيران، بجوار كوك دور', { exact: true })).toBeVisible();
+});
+
+test('hero motion can be paused and respects the reduced-motion preference', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.hero-motion')).toBeVisible();
+  await page.getByRole('button', { name: 'إيقاف حركة الصورة' }).click();
+  await expect(page.getByRole('button', { name: 'تشغيل حركة الصورة' })).toBeVisible();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(page.locator('.hero-motion')).toHaveCount(0);
 });

@@ -10,7 +10,8 @@ export const defaults = {
   mode: 'preview',
   heroTitle: copy.hero.title,
   heroSubtitle: copy.hero.subtitle,
-  heroImage: '/images/coffee-yellow-hero.webp',
+  heroImage: '/images/coffee-duo-hero.webp',
+  heroVideo: '/media/coffee-duo-loop.mp4',
   storyTitle: copy.story.title,
   storyText: copy.story.shortText,
   contactPhone: '',
@@ -67,8 +68,18 @@ export function openDatabase(directory = process.env.DATA_DIR || './data') {
       id INTEGER PRIMARY KEY AUTOINCREMENT, admin_id TEXT, action TEXT NOT NULL, entity TEXT NOT NULL,
       details TEXT NOT NULL, created_at INTEGER NOT NULL
     );
-    PRAGMA user_version = 1;
   `);
+  if (
+    !db
+      .prepare('PRAGMA table_info(orders)')
+      .all()
+      .some((column) => column.name === 'fulfillment_json')
+  ) {
+    db.exec(
+      `ALTER TABLE orders ADD COLUMN fulfillment_json TEXT NOT NULL DEFAULT '{"type":"delivery","branch":null}'`,
+    );
+  }
+  db.exec('PRAGMA user_version = 2');
   db.prepare('INSERT OR IGNORE INTO settings(id,value) VALUES(1,?)').run(JSON.stringify(defaults));
   if (!db.prepare('SELECT id FROM products LIMIT 1').get()) {
     const id = randomUUID();
@@ -147,9 +158,12 @@ export function transaction(db, fn) {
   }
 }
 export function getSettings(db) {
+  const saved = JSON.parse(db.prepare('SELECT value FROM settings WHERE id=1').get().value);
   return {
     ...defaults,
-    ...JSON.parse(db.prepare('SELECT value FROM settings WHERE id=1').get().value),
+    ...saved,
+    heroVideo:
+      saved.heroVideo ?? (saved.heroImage === defaults.heroImage ? defaults.heroVideo : ''),
   };
 }
 export function getProduct(db, row) {
@@ -188,6 +202,9 @@ export function allProducts(db, publicOnly = false) {
 export function orderView(row, privateView = false) {
   if (!row) return null;
   const customer = JSON.parse(row.customer);
+  const fulfillment = row.fulfillment_json
+    ? JSON.parse(row.fulfillment_json)
+    : { type: 'delivery', branch: null };
   return {
     id: privateView ? row.id : undefined,
     token: row.token,
@@ -195,6 +212,8 @@ export function orderView(row, privateView = false) {
     status: row.status,
     paymentStatus: row.payment_status,
     paymentMethod: row.payment_method,
+    fulfillment: fulfillment.type,
+    pickupBranch: fulfillment.type === 'pickup' ? fulfillment.branch : null,
     customer: privateView ? customer : { name: customer.name, city: customer.city },
     items: JSON.parse(row.items),
     zone: row.zone,

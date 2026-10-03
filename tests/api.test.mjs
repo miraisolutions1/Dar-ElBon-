@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { once } from 'node:events';
-import { openDatabase, getSettings } from '../server/db.mjs';
+import { openDatabase, getSettings, orderView } from '../server/db.mjs';
 import { createAdmin } from '../server/auth.mjs';
 import { createApp } from '../server/app.mjs';
 
@@ -72,6 +72,122 @@ async function fixture(t, { rateLimits = false } = {}) {
   });
   return { db, dir, base, password, request, cookie: login.cookie, login, product, order };
 }
+
+test('branch pickup validates selection, charges no delivery fee and preserves branch snapshot', async (t) => {
+  const f = await fixture(t);
+  const settings = getSettings(f.db);
+  settings.shippingZones[0].fee = 6500;
+  f.db.prepare('UPDATE settings SET value=? WHERE id=1').run(JSON.stringify(settings));
+  const input = {
+    ...f.order(),
+    customer: { name: 'عميل الاستلام', phone: '01012345678' },
+    fulfillment: 'pickup',
+    pickupBranchIndex: 0,
+    zoneId: undefined,
+    expectedTotal: f.product.variants[0].price * 2,
+    pickupBranch: { name: 'فرع مزيف', address: 'عنوان العميل غير الموثوق' },
+  };
+  const before = f.db
+    .prepare('SELECT stock FROM variants WHERE id=?')
+    .get(input.items[0].variantId).stock;
+  for (const index of [undefined, -1, 1.5, 11]) {
+    assert.equal(
+      (await f.request('/orders', { method: 'POST', body: { ...input, pickupBranchIndex: index } }))
+        .status,
+      400,
+    );
+  }
+  assert.equal(
+    f.db.prepare('SELECT stock FROM variants WHERE id=?').get(input.items[0].variantId).stock,
+    before,
+  );
+  const wrongTotal = await f.request('/orders', {
+    method: 'POST',
+    body: { ...input, expectedTotal: input.expectedTotal + 6500 },
+  });
+  assert.equal(wrongTotal.status, 409);
+  assert.equal(
+    f.db.prepare('SELECT stock FROM variants WHERE id=?').get(input.items[0].variantId).stock,
+    before,
+  );
+  const result = await f.request('/orders', { method: 'POST', body: input });
+  assert.equal(result.status, 201);
+  assert.equal(result.data.fulfillment, 'pickup');
+  assert.equal(result.data.shipping, 0);
+  assert.equal(result.data.total, input.expectedTotal);
+  const branch = { name: settings.branches[0].name, address: settings.branches[0].address };
+  assert.deepEqual(result.data.pickupBranch, branch);
+  const updated = {
+    ...settings,
+    branches: settings.branches.map((value, index) =>
+      index === 0
+        ? { ...value, name: 'الاسم الجديد', address: 'عنوان الفرع بعد تعديل الإدارة' }
+        : value,
+    ),
+  };
+  assert.equal(
+    (await f.request('/admin/settings', { method: 'PUT', cookie: f.cookie, body: updated })).status,
+    200,
+  );
+  assert.deepEqual((await f.request(`/orders/${result.data.token}`)).data.pickupBranch, branch);
+  const orders = (await f.request('/admin/orders', { cookie: f.cookie })).data;
+  const details = await f.request(`/admin/orders/${orders.orders[0].id}`, { cookie: f.cookie });
+  assert.deepEqual(details.data.pickupBranch, branch);
+  const repeat = await f.request('/orders', { method: 'POST', body: input });
+  assert.equal(repeat.status, 200);
+  assert.deepEqual(repeat.data.pickupBranch, branch);
+  assert.equal(
+    f.db.prepare('SELECT stock FROM variants WHERE id=?').get(input.items[0].variantId).stock,
+    before - 2,
+  );
+  updated.branches[0].enabled = false;
+  f.db.prepare('UPDATE settings SET value=? WHERE id=1').run(JSON.stringify(updated));
+  assert.equal(
+    (
+      await f.request('/orders', {
+        method: 'POST',
+        body: { ...input, idempotencyKey: randomUUID() },
+      })
+    ).status,
+    400,
+  );
+});
+
+test('legacy delivery input and old order database migrate with delivery fulfillment', async (t) => {
+  const f = await fixture(t);
+  const input = f.order();
+  const delivery = await f.request('/orders', { method: 'POST', body: input });
+  assert.equal(delivery.status, 201);
+  assert.equal(delivery.data.fulfillment, 'delivery');
+  assert.equal(delivery.data.pickupBranch, null);
+  assert.equal(
+    (await f.request('/orders', { method: 'POST', body: { ...input, fulfillment: 'delivery' } }))
+      .status,
+    200,
+  );
+  assert.equal(
+    (
+      await f.request('/orders', {
+        method: 'POST',
+        body: { ...f.order(), customer: { name: 'عميل', phone: '01012345678' } },
+      })
+    ).status,
+    400,
+  );
+  f.db.exec('ALTER TABLE orders DROP COLUMN fulfillment_json');
+  const reopened = openDatabase(f.dir);
+  try {
+    const migrated = orderView(
+      reopened.prepare('SELECT * FROM orders WHERE token=?').get(delivery.data.token),
+    );
+    assert.equal(migrated.fulfillment, 'delivery');
+    assert.equal(migrated.pickupBranch, null);
+    assert.equal(migrated.total, delivery.data.total);
+    assert.equal(reopened.prepare('PRAGMA user_version').get().user_version, 2);
+  } finally {
+    reopened.close();
+  }
+});
 
 test('private API, same-origin protection, role separation, and logout', async (t) => {
   const f = await fixture(t);

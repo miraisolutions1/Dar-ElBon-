@@ -382,6 +382,7 @@ function OrderTable({ orders }: { orders: Order[] }) {
           <tr>
             <th>الطلب</th>
             <th>العميل</th>
+            <th>مكان الاستلام</th>
             <th>القيمة</th>
             <th>الحالة</th>
             <th>التاريخ</th>
@@ -396,9 +397,19 @@ function OrderTable({ orders }: { orders: Order[] }) {
                 </Link>
                 {o.demo && <span className="demo-badge">تجريبي</span>}
               </td>
+              <td>{o.customer.name}</td>
               <td>
-                {o.customer.name}
-                <small>{o.zone}</small>
+                {o.fulfillment === 'pickup' ? (
+                  <>
+                    استلام من الفرع
+                    <small>{o.pickupBranch?.name || 'راجع تفاصيل الطلب'}</small>
+                  </>
+                ) : (
+                  <>
+                    توصيل للعنوان
+                    <small>{[o.zone, o.customer.city].filter(Boolean).join(' — ')}</small>
+                  </>
+                )}
               </td>
               <td>{money(o.total)}</td>
               <td>
@@ -533,6 +544,7 @@ export function OrderDetail() {
   if (loading && !order) return <Loading />;
   if (error) return <Alert>{error}</Alert>;
   if (!order) return null;
+  const pickup = order.fulfillment === 'pickup';
   return (
     <>
       <AdminHeading title={`طلب ${order.reference}`} subtitle={date(order.createdAt)}>
@@ -541,6 +553,23 @@ export function OrderDetail() {
         </Link>
       </AdminHeading>
       {order.demo && <Alert kind="info">طلب تجريبي — لا يُشحن ولا يُحتسب كمبيعات فعلية.</Alert>}
+      <section className="panel">
+        <h2>
+          {pickup
+            ? `الاستلام من فرع ${order.pickupBranch?.name || 'دار البن'}`
+            : 'توصيل الطلب للعنوان'}
+        </h2>
+        <p>
+          {pickup
+            ? order.pickupBranch?.address || 'عنوان الفرع غير مسجل في هذا الطلب.'
+            : [order.customer.address, order.customer.city, order.zone].filter(Boolean).join(' — ')}
+        </p>
+        <p className="tiny muted">
+          {pickup
+            ? 'الفرع والعنوان محفوظان كما كانا وقت إنشاء الطلب.'
+            : 'راجع عنوان العميل قبل تجهيز الشحنة.'}
+        </p>
+      </section>
       <div className="admin-two-col">
         <section className="panel">
           <h2>محتويات الطلب</h2>
@@ -561,10 +590,12 @@ export function OrderDetail() {
               <span>المنتجات</span>
               <strong>{money(order.subtotal)}</strong>
             </div>
-            <div>
-              <span>الشحن</span>
-              <strong>{money(order.shipping)}</strong>
-            </div>
+            {!pickup && (
+              <div>
+                <span>الشحن</span>
+                <strong>{money(order.shipping)}</strong>
+              </div>
+            )}
             <div>
               <span>الإجمالي</span>
               <strong>{money(order.total)}</strong>
@@ -582,17 +613,20 @@ export function OrderDetail() {
                 {order.customer.phone}
               </a>
             </dd>
-            <dt>المنطقة</dt>
-            <dd>
-              {order.zone} — {order.customer.city}
-            </dd>
-            <dt>العنوان</dt>
-            <dd>{order.customer.address}</dd>
+            {!pickup && (
+              <>
+                <dt>المنطقة</dt>
+                <dd>{[order.zone, order.customer.city].filter(Boolean).join(' — ')}</dd>
+                <dt>عنوان التوصيل</dt>
+                <dd>{order.customer.address}</dd>
+              </>
+            )}
             <dt>ملاحظات العميل</dt>
             <dd>{order.customer.notes || '—'}</dd>
             <dt>الدفع</dt>
             <dd>
-              عند الاستلام · <Status value={order.paymentStatus} />
+              {pickup ? 'الدفع عند الاستلام من الفرع' : 'الدفع عند استلام التوصيل'} ·{' '}
+              <Status value={order.paymentStatus} />
             </dd>
           </dl>
           <Link className="text-link" to={`/order/${order.token}`}>
@@ -632,7 +666,7 @@ export function OrderDetail() {
             <small>تحديث السجل فقط؛ لا ينفذ تحصيلًا أو رد مبلغ إلكترونيًا.</small>
           </label>
           <label className="field full-span">
-            رقم / معلومات متابعة الشحنة
+            {pickup ? 'معلومات متابعة الاستلام من الفرع' : 'رقم / معلومات متابعة الشحنة'}
             <input value={tracking} onChange={(e) => setTracking(e.target.value)} maxLength={300} />
           </label>
           <label className="field full-span">
@@ -1165,7 +1199,15 @@ export function SettingsPage({ contentOnly = false }: { contentOnly?: boolean })
                     required
                   />
                 </label>
-                <ImageUpload value={s.heroImage} onChange={(url) => patch('heroImage', url)} />
+                <ImageUpload
+                  value={s.heroImage}
+                  onChange={(url) => {
+                    setSettings((prev) =>
+                      prev ? { ...prev, heroImage: url, heroVideo: '' } : prev,
+                    );
+                    setMessage('');
+                  }}
+                />
               </section>
               <section className="panel">
                 <h2>حكاية دار البن</h2>
@@ -1198,7 +1240,7 @@ export function SettingsPage({ contentOnly = false }: { contentOnly?: boolean })
                     onClick={() =>
                       patch('branches', [
                         ...(s.branches || []),
-                        { name: '', address: '', main: false },
+                        { name: '', address: '', main: false, enabled: true },
                       ])
                     }
                   >
@@ -1244,6 +1286,24 @@ export function SettingsPage({ contentOnly = false }: { contentOnly?: boolean })
                         }
                       />
                     </label>
+                    <label className="check-label">
+                      <input
+                        type="checkbox"
+                        checked={branch.enabled !== false}
+                        onChange={(e) =>
+                          patch(
+                            'branches',
+                            s.branches.map((b, i) =>
+                              i === index ? { ...b, enabled: e.target.checked } : b,
+                            ),
+                          )
+                        }
+                      />
+                      متاح للاستلام
+                    </label>
+                    <p className="tiny muted">
+                      إيقاف الاستلام لا يخفي عنوان الفرع، ولا يغيّر الطلبات المسجلة.
+                    </p>
                     <label className="check-label">
                       <input
                         type="checkbox"

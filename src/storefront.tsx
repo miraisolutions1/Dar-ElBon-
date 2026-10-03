@@ -1,6 +1,8 @@
 import copy from '../content/site-copy-ar.json';
 import experience from '../content/coffee-experience-ar.json';
 import { TasteQuiz, RecipeCards, BranchDrinks } from './coffee-experience';
+import { BlendBuilder } from './blend-builder';
+import { HeroMedia } from './hero-media';
 import { useState, useEffect, type FormEvent } from 'react';
 import {
   Link,
@@ -149,16 +151,26 @@ export function StoreLayout() {
       <a href="#main" className="skip-link">
         انتقل للمحتوى
       </a>
-      {settings.mode === 'preview' && (
-        <div className="preview-bar">المتجر في وضع المعاينة · الأسعار والطلبات تجريبية</div>
-      )}
       <div className="storefront-frame">
         <header className="site-header">
           <div className="container header-inner">
-            <Link to="/" aria-label="دار البن — الرئيسية">
+            <Link className="header-brand" to="/" aria-label="دار البن — الرئيسية">
               <Brand />
             </Link>
-            <p className="header-note">{experience.header.note}</p>
+            <nav
+              id="main-navigation"
+              className={menu ? 'site-nav open' : 'site-nav'}
+              aria-label="القائمة الرئيسية"
+            >
+              <NavLink to="/" end>
+                الرئيسية
+              </NavLink>
+              <NavLink to="/shop">{copy.navigation.shop}</NavLink>
+              <NavLink to="/blend">كوّن توليفتك</NavLink>
+              <NavLink to="/about">حكاية دار البن</NavLink>
+              <NavLink to="/branches">فروعنا</NavLink>
+              <NavLink to="/guide">ساعدني أختار</NavLink>
+            </nav>
             <div className="header-actions">
               <Link className="header-guide" to="/quiz">
                 {experience.header.quizCta} <ArrowLeft size={15} />
@@ -167,7 +179,7 @@ export function StoreLayout() {
                 className="icon-button search-toggle"
                 aria-label="البحث في القهوة"
                 aria-expanded={search}
-                aria-controls="mobile-search"
+                aria-controls="header-search"
                 onClick={() => {
                   setSearch((v) => !v);
                   setMenu(false);
@@ -198,47 +210,10 @@ export function StoreLayout() {
               </button>
             </div>
           </div>
-          <div className="header-navigation">
-            <div className="container navigation-inner">
-              <nav
-                id="main-navigation"
-                className={menu ? 'site-nav open' : 'site-nav'}
-                aria-label="القائمة الرئيسية"
-              >
-                <NavLink to="/" end>
-                  الرئيسية
-                </NavLink>
-                <NavLink to="/shop">{copy.navigation.shop}</NavLink>
-                <NavLink to="/about">حكاية دار البن</NavLink>
-                <NavLink to="/branches">فروعنا</NavLink>
-                <NavLink to="/guide">ساعدني أختار</NavLink>
-              </nav>
-              <form
-                className="desktop-search"
-                role="search"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  nav(
-                    '/shop?q=' +
-                      encodeURIComponent(String(new FormData(e.currentTarget).get('q') || '')),
-                  );
-                }}
-              >
-                <input
-                  name="q"
-                  aria-label="ابحث عن قهوتك"
-                  placeholder={copy.navigation.searchPlaceholder}
-                />
-                <button aria-label="بحث" type="submit">
-                  <Search size={19} />
-                </button>
-              </form>
-            </div>
-          </div>
           {search && (
             <form
               className="header-search container"
-              id="mobile-search"
+              id="header-search"
               role="search"
               onSubmit={(e) => {
                 e.preventDefault();
@@ -301,9 +276,9 @@ export function StoreLayout() {
           <div className="container footer-bottom">
             <span>© {new Date().getFullYear()} دار البن البرازيلي</span>
             <span>بكل هدوء… استمتع بقهوتك.</span>
-            <Link to="/admin">
-              إدارة المتجر <ArrowUpLeft size={13} />
-            </Link>
+            <span className="developer-credit" dir="ltr">
+              Developed by <strong>Mirai Solutions</strong>
+            </span>
           </div>
         </footer>
       </div>
@@ -317,7 +292,7 @@ export function Home() {
   const choices = featured
     .flatMap((product) => product.variants.map((variant) => ({ product, variant })))
     .slice(0, 4);
-  const coffeeSheet = '/images/brewing-methods.webp';
+  const coffeeSheet = '/images/brewing-editorial.webp';
   const sections: Record<string, React.ReactNode> = {
     branches: <Branches />,
     quiz: <TasteQuiz products={products} />,
@@ -328,13 +303,23 @@ export function Home() {
         <SectionTitle eyebrow={copy.brewing.eyebrow} title={copy.brewing.title} />
         <div className="brew-grid">
           {copy.brewing.items
-            .map((item, index) => ({ ...item, position: ['100%', '50%', '0%'][index] }))
-            .map(({ name, description, position }) => (
+            .map((item, index) => ({
+              ...item,
+              position: ['100%', '50%', '0%'][index],
+              number: index + 1,
+              label: ['قهوة تركي', 'إسبريسو', 'قهوة فلتر'][index],
+              tool: ['على نار هادية', 'من ماكينة القهوة', 'بالتقطير'][index],
+            }))
+            .map(({ name, description, position, number, label, tool }) => (
               <Link
                 key={name}
                 to={`${products.some((p) => p.brew.includes(name)) ? '/shop' : '/guide'}?brew=${encodeURIComponent(name)}`}
                 className="brew-card"
               >
+                <div className="brew-topline">
+                  <span className="brew-number">0{number}</span>
+                  <span className="brew-tool">{tool}</span>
+                </div>
                 <div
                   className="brew-photo"
                   role="img"
@@ -342,10 +327,13 @@ export function Home() {
                   style={{ backgroundImage: `url(${coffeeSheet})`, backgroundPositionX: position }}
                 />
                 <div className="brew-caption">
-                  <h3>{name}</h3>
+                  <h3>{label}</h3>
                   <p>{description}</p>
                   <small className="brew-route-label">
-                    {products.some((p) => p.brew.includes(name)) ? 'تسوق البن' : 'اعرف الطريقة'}
+                    {products.some((p) => p.brew.includes(name))
+                      ? 'شوف البن المناسب'
+                      : 'اعرف طريقة التحضير'}
+                    <ArrowLeft size={16} aria-hidden="true" />
                   </small>
                   <span className="brew-arrow" aria-hidden="true">
                     <ArrowLeft size={17} />
@@ -456,13 +444,7 @@ export function Home() {
   return (
     <>
       <section className="hero">
-        <div className="hero-visual">
-          <img
-            src={settings.heroImage}
-            alt="عبوة دار البن البرازيلي مع فنجان قهوة وركوة نحاسية"
-            fetchPriority="high"
-          />
-        </div>
+        <HeroMedia image={settings.heroImage} video={settings.heroVideo} />
         <div className="container hero-content">
           <div className="hero-copy">
             <span className="eyebrow">{copy.hero.eyebrow}</span>
@@ -550,6 +532,18 @@ export function Shop() {
         <h1>اختار قهوتك.</h1>
         <p>توليفات مختلفة، وتفاصيل صغيرة تعمل فرق.</p>
       </div>
+      <Link className="blend-shop-banner" to="/blend">
+        <span className="blend-banner-icon">
+          <Bean size={28} />
+        </span>
+        <span>
+          <strong>توليفة على ذوقك</strong>
+          <small>اختار نسبة كل نوع بن، وشوف وزن وسعر الخلطة — حاسبة معاينة</small>
+        </span>
+        <span className="blend-banner-cta">
+          كوّن توليفتك <ArrowLeft size={18} />
+        </span>
+      </Link>
       <div className="shop-toolbar">
         <div className="search-input">
           <Search size={18} />
@@ -853,9 +847,18 @@ export function Checkout() {
   const details = useCartDetails();
   const navigate = useNavigate();
   const [zoneId, setZone] = useState('');
+  const [fulfillment, setFulfillment] = useState<'delivery' | 'pickup'>('delivery');
+  const [pickupBranchIndex, setPickupBranchIndex] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const zone = settings.shippingZones.find((z) => z.id === zoneId);
+  const shipping = fulfillment === 'pickup' ? 0 : zone?.fee || 0;
+  const destinationReady =
+    fulfillment === 'pickup'
+      ? pickupBranchIndex !== '' &&
+        !!settings.branches[Number(pickupBranchIndex)] &&
+        settings.branches[Number(pickupBranchIndex)].enabled !== false
+      : !!zone;
   const subtotal = details.reduce((sum, d) => sum + d.total, 0);
   const [key] = useState(() => {
     try {
@@ -881,9 +884,11 @@ export function Checkout() {
       const order = await send<Order>('/orders', 'POST', {
         idempotencyKey: key,
         customer,
-        zoneId,
+        fulfillment,
+        pickupBranchIndex: fulfillment === 'pickup' ? Number(pickupBranchIndex) : undefined,
+        zoneId: fulfillment === 'delivery' ? zoneId : undefined,
         paymentMethod: 'cod',
-        expectedTotal: subtotal + (zone?.fee || 0),
+        expectedTotal: subtotal + shipping,
         items: details.map((d) => d.line),
       });
       clear();
@@ -918,7 +923,7 @@ export function Checkout() {
       </div>
       <div className="page-title">
         <span className="eyebrow">خطوة وتكمل الحكاية</span>
-        <h1>نوصلها فين؟</h1>
+        <h1>تستلم قهوتك إزاي؟</h1>
         <p>كمّل طلبك من غير إنشاء حساب.</p>
       </div>
       {settings.mode === 'preview' && (
@@ -926,7 +931,33 @@ export function Checkout() {
       )}
       <form className="checkout-layout" onSubmit={submit}>
         <div className="panel checkout-form">
-          <h2>بيانات التوصيل</h2>
+          <h2>طريقة الاستلام</h2>
+          <fieldset className="fulfillment-options">
+            <legend className="sr-only">طريقة الاستلام</legend>
+            <label>
+              <input
+                type="radio"
+                name="fulfillment"
+                value="delivery"
+                checked={fulfillment === 'delivery'}
+                onChange={() => setFulfillment('delivery')}
+              />
+              توصيل للعنوان
+            </label>
+            {!!settings.branches.length && (
+              <label>
+                <input
+                  type="radio"
+                  name="fulfillment"
+                  value="pickup"
+                  checked={fulfillment === 'pickup'}
+                  onChange={() => setFulfillment('pickup')}
+                />
+                استلام من الفرع
+              </label>
+            )}
+          </fieldset>
+          <h2>بياناتك</h2>
           <div className="form-grid">
             <label className="field">
               الاسم بالكامل
@@ -945,34 +976,55 @@ export function Checkout() {
                 placeholder="01xxxxxxxxx"
               />
             </label>
-            <label className="field">
-              منطقة الشحن
-              <select required value={zoneId} onChange={(e) => setZone(e.target.value)}>
-                <option value="">اختار المنطقة</option>
-                {settings.shippingZones.map((z) => (
-                  <option value={z.id} key={z.id}>
-                    {z.name} — {money(z.fee)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              المدينة / الحي
-              <input name="city" required maxLength={200} autoComplete="address-level2" />
-            </label>
+            {fulfillment === 'delivery' ? (
+              <>
+                <label className="field">
+                  منطقة الشحن
+                  <select required value={zoneId} onChange={(e) => setZone(e.target.value)}>
+                    <option value="">اختار المنطقة</option>
+                    {settings.shippingZones.map((z) => (
+                      <option value={z.id} key={z.id}>
+                        {z.name} — {money(z.fee)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  المدينة / الحي
+                  <input name="city" required maxLength={200} autoComplete="address-level2" />
+                </label>
+                <label className="field full-span">
+                  العنوان بالتفصيل
+                  <textarea
+                    name="address"
+                    required
+                    minLength={8}
+                    maxLength={500}
+                    autoComplete="street-address"
+                    placeholder="الشارع، رقم العمارة، الدور، الشقة وأقرب علامة مميزة"
+                  />
+                </label>
+              </>
+            ) : (
+              <label className="field full-span">
+                فرع الاستلام
+                <select
+                  value={pickupBranchIndex}
+                  required
+                  onChange={(e) => setPickupBranchIndex(e.target.value)}
+                >
+                  <option value="">اختار الفرع</option>
+                  {settings.branches.map((branch, index) => (
+                    <option key={index} value={index} disabled={branch.enabled === false}>
+                      {branch.name} — {branch.address}
+                    </option>
+                  ))}
+                </select>
+                <small>اسم الفرع وعنوانه بيتحفظوا مع طلبك.</small>
+              </label>
+            )}
             <label className="field full-span">
-              العنوان بالتفصيل
-              <textarea
-                name="address"
-                required
-                minLength={8}
-                maxLength={500}
-                autoComplete="street-address"
-                placeholder="الشارع، رقم العمارة، الدور، الشقة وأقرب علامة مميزة"
-              />
-            </label>
-            <label className="field full-span">
-              ملاحظات للتوصيل <span className="optional">اختياري</span>
+              ملاحظات للطلب <span className="optional">اختياري</span>
               <textarea name="notes" maxLength={500} rows={2} />
             </label>
           </div>
@@ -982,7 +1034,11 @@ export function Checkout() {
               <CheckCircle2 size={21} />
               <div>
                 <strong>الدفع عند الاستلام</strong>
-                <p>ادفع قيمة طلبك عند وصوله.</p>
+                <p>
+                  {fulfillment === 'pickup'
+                    ? 'ادفع قيمة طلبك عند الاستلام من الفرع.'
+                    : 'ادفع قيمة طلبك عند وصوله.'}
+                </p>
               </div>
             </div>
           ) : (
@@ -1008,12 +1064,21 @@ export function Checkout() {
           ))}
           <div className="row between">
             <span>الشحن</span>
-            <strong>{zone ? money(zone.fee) : 'اختار المنطقة'}</strong>
+            <strong>
+              {fulfillment === 'pickup' ? money(0) : zone ? money(zone.fee) : 'اختار المنطقة'}
+            </strong>
           </div>
-          {zone && <p className="tiny muted">مدة التوصيل: {zone.eta}</p>}
+          {fulfillment === 'delivery' && zone && (
+            <p className="tiny muted">مدة التوصيل: {zone.eta}</p>
+          )}
+          {fulfillment === 'pickup' && pickupBranchIndex !== '' && (
+            <p className="tiny muted">
+              الاستلام من: {settings.branches[Number(pickupBranchIndex)]?.name}
+            </p>
+          )}
           <div className="summary-total">
             <span>الإجمالي</span>
-            <strong>{money(subtotal + (zone?.fee || 0))}</strong>
+            <strong>{money(subtotal + shipping)}</strong>
           </div>
           <Alert>{error}</Alert>
           {!details.every((d) => d.valid) && (
@@ -1023,7 +1088,9 @@ export function Checkout() {
           )}
           <button
             className="btn full"
-            disabled={busy || !zone || !settings.codEnabled || !details.every((d) => d.valid)}
+            disabled={
+              busy || !destinationReady || !settings.codEnabled || !details.every((d) => d.valid)
+            }
           >
             {busy
               ? 'جاري تسجيل الطلب…'
@@ -1089,14 +1156,24 @@ export function OrderPage() {
           </div>
         ))}
         <div className="row between">
-          <span>الشحن · {order.zone}</span>
+          <span>
+            {order.fulfillment === 'pickup' ? 'استلام من الفرع' : `الشحن · ${order.zone}`}
+          </span>
           <strong>{money(order.shipping)}</strong>
         </div>
         <div className="summary-total">
           <span>الإجمالي</span>
           <strong>{money(order.total)}</strong>
         </div>
-        <p>مدة التوصيل: {order.eta}</p>
+        {order.fulfillment === 'pickup' && order.pickupBranch ? (
+          <div className="pickup-confirmation">
+            <h3>الاستلام من: {order.pickupBranch.name}</h3>
+            <p>{order.pickupBranch.address}</p>
+            <p>تابع حالة الطلب قبل التوجّه للفرع.</p>
+          </div>
+        ) : (
+          <p>مدة التوصيل: {order.eta}</p>
+        )}
         {order.tracking && <p>متابعة الشحنة: {order.tracking}</p>}
         <small className="muted">تم التسجيل: {date(order.createdAt)}</small>
       </div>
@@ -1328,8 +1405,8 @@ export function NotFound() {
 export function QuizPage() {
   const { products } = useStore();
   return (
-    <div className="page-space">
-      <TasteQuiz products={products} />
+    <div className="page-space quiz-page">
+      <TasteQuiz products={products} standalone />
     </div>
   );
 }
@@ -1337,6 +1414,14 @@ export function RecipesPage() {
   return (
     <div className="page-space">
       <RecipeCards />
+    </div>
+  );
+}
+
+export function BlendPage() {
+  return (
+    <div className="page-space blend-page">
+      <BlendBuilder standalone />
     </div>
   );
 }

@@ -2475,3 +2475,301 @@
     padding: 23px;
   }
 }
+
+/* Editorial brewing cards: generous imagery and a clear Egyptian coffee ritual. */
+.storefront .coffee-selection .brew-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 25px;
+}
+.storefront .coffee-selection .brew-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  height: auto;
+  padding: 0;
+  border: 1px solid #e3d7bd;
+  border-radius: 24px;
+  background: #f8f0e0;
+  overflow: hidden;
+  box-shadow: 0 9px 28px #49301a06;
+  isolation: isolate;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+.storefront .coffee-selection .brew-card:first-child {
+  background: #ffd200;
+  border-color: #eac00c;
+}
+.storefront .coffee-selection .brew-card:nth-child(3) {
+  background: #ead5b4;
+}
+.storefront .coffee-selection .brew-card:hover {
+  transform: translateY(-5px);
+  border-color: #ba8d38;
+  box-shadow: 0 16px 36px #49301a14;
+}
+.storefront .coffee-selection .brew-photo {
+  position: relative;
+  inset: auto;
+  display: block;
+  flex-shrink: 0;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1.2;
+  background-size: 300% auto;
+  background-repeat: no-repeat;
+  background-position-y: center;
+  mix-blend-mode: normal;
+  transition: transform 0.45s ease;
+  z-index: -1;
+}
+.storefront .coffee-selection .brew-card:hover .brew-photo {
+  transform: scale(1.035);
+}
+.storefront .coffee-selection .brew-topline {
+  position: absolute;
+  inset-inline: 19px;
+  top: 19px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  z-index: 2;
+  pointer-events: none;
+}
+.storefront .coffee-selection .brew-topline > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 33px;
+  padding: 6px 12px;
+  border: 1px solid #f5e3bf99;
+  border-radius: 20px;
+  background: #fff9e8ed;
+  color: #493218;
+  font-size: 11px;
+  line-height: 1.5;
+  font-weight: 750;
+}
+.storefront .coffee-selection .brew-topline > span:first-child,
+.storefront .coffee-selection .brew-number {
+  min-width: 35px;
+  padding-inline: 9px;
+  background: #ffd200;
+  border-color: #ebc009;
+  color: #302218;
+  font-size: 13px;
+  font-weight: 850;
+}
+.storefront .coffee-selection .brew-caption {
+  position: relative;
+  width: 100%;
+  text-align: start;
+  flex: 1;
+  padding: 27px 28px 30px;
+  background: inherit;
+  z-index: 1;
+}
+.storefront .coffee-selection .brew-caption h3 {
+  color: #302218;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.7;
+  margin: 0 0 8px;
+}
+.storefront .coffee-selection .brew-caption p {
+  display: block;
+  max-width: none;
+  color: #624c2c;
+  font-size: 14px;
+  line-height: 1.95;
+  min-height: 55px;
+  margin: 0 0 23px;
+}
+.storefront .coffee-selection .brew-route-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 23px;
+  width: fit-content;
+  min-height: 43px;
+  padding: 9px 16px;
+  margin: 0;
+  border: 1px solid #b69252;
+  border-radius: 24px;
+  color: #493013;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.5;
+}
+.storefront .coffee-selection .brew-card:first-child .brew-route-label {
+  background: #302218;
+  border-color: #302218;
+  color: #fff9e6;
+}
+.storefront .coffee-selection .brew-route-label svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+.storefront .coffee-selection .brew-arrow {
+  display: none;
+}
+@media (min-width: 761px) and (max-width: 1100px) {
+  .storefront .coffee-selection .brew-grid {
+    gap: 18px;
+  }
+  .storefront .coffee-selection .brew-card {
+    border-radius: 20px;
+  }
+  .storefront .coffee-selection .brew-topline {
+    inset-inline: 13px;
+    top: 13px;
+  }
+  .storefront .coffee-selection .brew-topline > span {
+    font-size: 10px;
+    padding-inline: 9px;
+  }
+  .storefront .coffee-selection .brew-caption {
+    padding: 23px 20px 25px;
+  }
+  .storefront .coffee-selection .brew-caption h3 {
+    font-size: 24px;
+  }
+  .storefront .coffee-selection .brew-caption p {
+    font-size: 13px;
+    min-height: 76px;
+  }
+}
+@media (max-width: 760px) {
+  .storefront .coffee-selection .brew-grid {
+    grid-template-columns: 1fr;
+    gap: 21px;
+  }
+  .storefront .coffee-selection .brew-card {
+    border-radius: 22px;
+  }
+  .storefront .coffee-selection .brew-photo {
+    aspect-ratio: 1.9;
+  }
+  .storefront .coffee-selection .brew-caption {
+    padding: 23px 25px 26px;
+  }
+  .storefront .coffee-selection .brew-caption h3 {
+    font-size: 25px;
+  }
+  .storefront .coffee-selection .brew-caption p {
+    font-size: 14px;
+    min-height: 0;
+    margin-bottom: 19px;
+  }
+  .storefront .coffee-selection .brew-topline {
+    top: 15px;
+    inset-inline: 15px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .storefront .coffee-selection .brew-card,
+  .storefront .coffee-selection .brew-photo {
+    transition: none;
+  }
+  .storefront .coffee-selection .brew-card:hover,
+  .storefront .coffee-selection .brew-card:hover .brew-photo {
+    transform: none;
+  }
+}
+
+.storefront .blend-shop-banner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 22px 26px;
+  margin-bottom: 28px;
+  border-radius: 18px;
+  background: #fff3b0;
+  border: 1px solid #e7ce5b;
+}
+.storefront .blend-shop-banner .blend-banner-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 55px;
+  height: 55px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #ffd200;
+}
+.storefront .blend-shop-banner strong {
+  display: block;
+  font-weight: 850;
+  font-size: 21px;
+  margin-bottom: 4px;
+}
+.storefront .blend-shop-banner small {
+  display: block;
+  color: #6e542b;
+  line-height: 1.8;
+}
+.storefront .blend-shop-banner .blend-banner-cta {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-inline-start: auto;
+  flex-shrink: 0;
+  font-weight: 750;
+  border-radius: 24px;
+  background: #302218;
+  color: #fff8e9;
+  padding: 12px 20px;
+}
+@media (max-width: 760px) {
+  .storefront .blend-shop-banner {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 20px;
+  }
+  .storefront .blend-shop-banner > span:nth-child(2) {
+    flex: 1;
+    min-width: 170px;
+  }
+  .storefront .blend-shop-banner .blend-banner-cta {
+    width: 100%;
+    justify-content: center;
+    margin: 0;
+  }
+}
+.storefront .fulfillment-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  border: 0;
+  padding: 0;
+  margin: 0 0 26px;
+}
+.storefront .fulfillment-options label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 170px;
+  min-height: 58px;
+  padding: 16px;
+  background: #fff8dc;
+  border: 1px solid #e7d58f;
+  border-radius: 12px;
+  font-weight: 700;
+}
+.storefront .fulfillment-options input {
+  accent-color: #825612;
+}
+.storefront .pickup-confirmation {
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 12px;
+  background: #fff5bf;
+  line-height: 1.8;
+}

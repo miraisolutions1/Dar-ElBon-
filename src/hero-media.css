@@ -1,0 +1,42 @@
+.storefront .hero-visual .hero-motion {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+}
+.storefront .hero-visual .hero-motion-toggle {
+  position: absolute;
+  left: 22px;
+  bottom: 18px;
+  z-index: 8;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #21190fc9;
+  color: #fff4d4;
+  border: 1px solid #fff4d44d;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.storefront .hero-visual .hero-motion-toggle:focus-visible {
+  outline: 3px solid #ffd200;
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .storefront .hero-visual .hero-motion {
+    object-position: 8% center;
+  }
+}
+
+.storefront .hero-content {
+  pointer-events: none;
+}
+.storefront .hero-content .hero-copy {
+  pointer-events: auto;
+}

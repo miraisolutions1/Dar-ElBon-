@@ -86,7 +86,12 @@ export function saveProduct(db, id, product, user) {
 }
 
 export function placeOrder(db, input) {
-  const hash = digest(JSON.stringify(input));
+  const hashInput = { ...input };
+  if (input.fulfillment !== 'pickup') {
+    delete hashInput.fulfillment;
+    delete hashInput.pickupBranchIndex;
+  }
+  const hash = digest(JSON.stringify(hashInput));
   return transaction(db, () => {
     const existing = db
       .prepare('SELECT * FROM orders WHERE idempotency_key=?')
@@ -97,12 +102,30 @@ export function placeOrder(db, input) {
       return { order: orderView(existing), repeated: true };
     }
     const settings = getSettings(db);
-    const zone = settings.shippingZones.find((z) => z.id === input.zoneId && z.enabled);
+    const pickup = input.fulfillment === 'pickup';
+    const selectedBranch = pickup ? settings.branches?.[input.pickupBranchIndex] : null;
+    if (
+      pickup &&
+      (!selectedBranch ||
+        selectedBranch.enabled === false ||
+        !selectedBranch.name ||
+        !selectedBranch.address)
+    )
+      throw new HttpError(400, 'اختر فرع استلام متاح.');
+    const branch = pickup ? { name: selectedBranch.name, address: selectedBranch.address } : null;
+    const fulfillment = { type: pickup ? 'pickup' : 'delivery', branch };
+    const zone = pickup
+      ? { name: branch.name, fee: 0, eta: 'انتظر تأكيد تجهيز طلبك للاستلام من الفرع.' }
+      : settings.shippingZones.find((z) => z.id === input.zoneId && z.enabled);
     if (!zone) throw new HttpError(400, 'اختر منطقة توصيل متاحة.');
     if (!settings.codEnabled) throw new HttpError(400, 'الدفع عند الاستلام غير متاح حاليًا.');
     if (settings.mode === 'live' && !launchChecks(db, settings).every((c) => c.ok))
       throw new HttpError(503, 'استقبال الطلبات متوقف مؤقتًا.');
-    if (settings.mode === 'live' && (zone.id === 'demo-zone' || zone.name.includes('تجريب')))
+    if (
+      !pickup &&
+      settings.mode === 'live' &&
+      (zone.id === 'demo-zone' || zone.name.includes('تجريب'))
+    )
       throw new HttpError(400, 'منطقة الشحن تجريبية وغير متاحة للطلبات الفعلية.');
     const items = [];
     let subtotal = 0;
@@ -160,8 +183,8 @@ export function placeOrder(db, input) {
     const reference = `DB-${new Date(now).toISOString().slice(2, 10).replaceAll('-', '')}-${randomBytes(4).toString('hex').toUpperCase()}`;
     const result = db
       .prepare(
-        `INSERT INTO orders(token,reference,idempotency_key,request_hash,status,payment_status,payment_method,customer,items,zone,eta,subtotal,shipping,total,demo,created_at,updated_at)
-      VALUES(?,?,?,?,'new','unpaid',?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO orders(token,reference,idempotency_key,request_hash,status,payment_status,payment_method,customer,items,zone,eta,subtotal,shipping,total,demo,created_at,updated_at,fulfillment_json)
+      VALUES(?,?,?,?,'new','unpaid',?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
         token,
@@ -179,6 +202,7 @@ export function placeOrder(db, input) {
         Number(settings.mode !== 'live'),
         now,
         now,
+        JSON.stringify(fulfillment),
       );
     return {
       order: orderView(db.prepare('SELECT * FROM orders WHERE id=?').get(result.lastInsertRowid)),

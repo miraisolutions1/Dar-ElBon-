@@ -25,6 +25,7 @@ export type Settings = {
   heroTitle: string;
   heroSubtitle: string;
   heroImage: string;
+  heroVideo?: string;
   storyTitle: string;
   storyText: string;
   contactPhone: string;
@@ -35,7 +36,7 @@ export type Settings = {
   privacyPolicy: string;
   codEnabled: boolean;
   sections: string[];
-  branches: { name: string; address: string; main: boolean }[];
+  branches: { name: string; address: string; main: boolean; enabled?: boolean }[];
   shippingZones: { id: string; name: string; fee: number; eta: string; enabled: boolean }[];
 };
 export type CartLine = { productId: string; variantId: string; grind: string; quantity: number };
@@ -46,6 +47,8 @@ export type Order = {
   status: string;
   paymentStatus: string;
   paymentMethod: string;
+  fulfillment?: 'delivery' | 'pickup';
+  pickupBranch?: { name: string; address: string } | null;
   customer: { name: string; phone: string; city: string; address: string; notes: string };
   items: (CartLine & {
     name: string;

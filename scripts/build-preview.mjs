@@ -8,11 +8,12 @@ if (catalog.settings.mode !== 'preview')
 // This also supports the yellow hero, sada tin, branch drinks, and recipe sheet.
 const assetCache = new Map();
 function inlineAsset(path) {
-  if (!path?.startsWith('/images/')) return path;
+  if (!path?.startsWith('/images/') && !path?.startsWith('/media/')) return path;
   if (path.includes('..') || path.includes('\\'))
     throw new Error('Unsafe public image path in preview catalog.');
   if (assetCache.has(path)) return assetCache.get(path);
   const mime = {
+    mp4: 'video/mp4',
     webp: 'image/webp',
     png: 'image/png',
     jpg: 'image/jpeg',
@@ -25,6 +26,7 @@ function inlineAsset(path) {
   return data;
 }
 catalog.settings.heroImage = inlineAsset(catalog.settings.heroImage);
+catalog.settings.heroVideo = inlineAsset(catalog.settings.heroVideo);
 catalog.products.forEach((product) => {
   product.image = inlineAsset(product.image);
 });
@@ -59,8 +61,9 @@ import { HashRouter, Routes, Route, Link } from 'react-router-dom';
 import '@fontsource-variable/cairo';
 import './src/styles.css';
 import './src/storefront-theme.css';
+import './src/header-theme.css';
 import { StoreProvider, CartProvider } from './src/lib';
-import { StoreLayout, Home, Shop, ProductPage, CartPage, Guide, About, BranchesPage, QuizPage, RecipesPage, Policy, NotFound } from './src/storefront';
+import { StoreLayout, Home, Shop, ProductPage, CartPage, Guide, About, BranchesPage, QuizPage, RecipesPage, BlendPage, Policy, NotFound } from './src/storefront';
 const catalog = ${json(catalog)};
 window.fetch = async (input) => {
   const path = new URL(String(input), 'https://preview.example').pathname;
@@ -100,6 +103,7 @@ createRoot(document.getElementById('root')).render(
     <Route path="about" element={<About />} />
     <Route path="branches" element={<BranchesPage />} />
     <Route path="quiz" element={<QuizPage />} />
+    <Route path="blend" element={<BlendPage />} />
     <Route path="learn" element={<RecipesPage />} />
     <Route path="policies/:type" element={<Policy />} />
     <Route path="admin/*" element={<AdminPreview />} />
@@ -126,10 +130,7 @@ const result = await build({
         builder.onLoad(
           { filter: /src\/(?:storefront|components|coffee-experience)\.tsx$/ },
           (args) => ({
-            contents: inlineSourceImages(readFileSync(args.path, 'utf8')).replace(
-              'المتجر في وضع المعاينة · الأسعار والطلبات تجريبية',
-              'معاينة تفاعلية للتصميم · الأسعار توضيحية · لا يتم إرسال طلبات',
-            ),
+            contents: inlineSourceImages(readFileSync(args.path, 'utf8')),
             loader: 'tsx',
           }),
         );

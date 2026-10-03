@@ -45,6 +45,10 @@ export const settingsSchema = z
     heroTitle: short,
     heroSubtitle: short,
     heroImage: imagePath,
+    heroVideo: z
+      .string()
+      .regex(/^(?:|\/media\/[a-zA-Z0-9._-]+\.mp4)$/)
+      .optional(),
     storyTitle: short,
     storyText: z.string().trim().max(3000),
     contactPhone: z.string().trim().max(30),
@@ -74,6 +78,7 @@ export const settingsSchema = z
           name: z.string().trim().min(1).max(80),
           address: z.string().trim().min(1).max(300),
           main: z.boolean(),
+          enabled: z.boolean().optional(),
         }),
       )
       .max(12)
@@ -96,33 +101,65 @@ export const settingsSchema = z
       new Set(s.shippingZones.map((z) => z.id)).size === s.shippingZones.length,
     { message: 'القيم المكررة غير مسموحة' },
   );
-export const orderSchema = z.object({
-  idempotencyKey: z.string().uuid(),
-  customer: z.object({
-    name: z.string().trim().min(3).max(100),
-    phone: z
-      .string()
-      .trim()
-      .regex(/^\+?[0-9 ()-]{8,25}$/),
-    city: short,
-    address: z.string().trim().min(8).max(500),
-    notes: z.string().trim().max(500).default(''),
-  }),
-  zoneId: z.string().min(1).max(60),
-  paymentMethod: z.literal('cod'),
-  expectedTotal: z.number().int().min(0).optional(),
-  items: z
-    .array(
-      z.object({
-        productId: z.string().uuid(),
-        variantId: z.string().uuid(),
-        grind: short,
-        quantity: z.number().int().min(1).max(30),
-      }),
-    )
-    .min(1)
-    .max(30),
-});
+export const orderSchema = z
+  .object({
+    idempotencyKey: z.string().uuid(),
+    customer: z.object({
+      name: z.string().trim().min(3).max(100),
+      phone: z
+        .string()
+        .trim()
+        .regex(/^\+?[0-9 ()-]{8,25}$/),
+      city: z.string().trim().max(200).default(''),
+      address: z.string().trim().max(500).default(''),
+      notes: z.string().trim().max(500).default(''),
+    }),
+    zoneId: z.string().min(1).max(60).optional(),
+    paymentMethod: z.literal('cod'),
+    expectedTotal: z.number().int().min(0).optional(),
+    items: z
+      .array(
+        z.object({
+          productId: z.string().uuid(),
+          variantId: z.string().uuid(),
+          grind: short,
+          quantity: z.number().int().min(1).max(30),
+        }),
+      )
+      .min(1)
+      .max(30),
+    fulfillment: z.enum(['delivery', 'pickup']).default('delivery'),
+    pickupBranchIndex: z.number().int().min(0).max(11).optional(),
+  })
+  .superRefine((input, context) => {
+    if (input.fulfillment === 'pickup') {
+      if (input.pickupBranchIndex === undefined)
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['pickupBranchIndex'],
+          message: 'اختر فرع الاستلام.',
+        });
+    } else {
+      if (!input.zoneId)
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['zoneId'],
+          message: 'اختر منطقة التوصيل.',
+        });
+      if (!input.customer.city)
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['customer', 'city'],
+          message: 'أدخل المدينة.',
+        });
+      if (input.customer.address.length < 8)
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['customer', 'address'],
+          message: 'أدخل عنوان توصيل كامل.',
+        });
+    }
+  });
 export const orderUpdateSchema = z.object({
   status: z.enum(['new', 'confirmed', 'preparing', 'shipped', 'delivered', 'cancelled']).optional(),
   paymentStatus: z.enum(['unpaid', 'paid', 'refunded']).optional(),
