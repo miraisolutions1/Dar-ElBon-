@@ -1,0 +1,80 @@
+name: Publish website preview
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out the preview
+        id: checkout
+        uses: actions/checkout@v4
+      - name: Configure GitHub Pages
+        id: configure
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Upload the static preview
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - name: Publish the preview
+        id: deployment
+        uses: actions/deploy-pages@v4
+      # Keep an inspectable deployment receipt even when API access from the
+      # development environment is unavailable. This never changes main.
+      - name: Record the deployment result
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        env:
+          CONFIGURE_RESULT: ${{ steps.configure.outcome }}
+          DEPLOY_RESULT: ${{ steps.deployment.outcome }}
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          node <<'JS'
+          const fs = require('node:fs');
+          fs.writeFileSync('pages-deployment.json', JSON.stringify({
+            commit: process.env.GITHUB_SHA,
+            run: process.env.GITHUB_RUN_ID,
+            configure: process.env.CONFIGURE_RESULT,
+            deployment: process.env.DEPLOY_RESULT,
+            url: process.env.PAGE_URL || null,
+            recordedAt: new Date().toISOString()
+          }, null, 2) + '\n');
+          JS
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          receipt_parent=''
+          if git ls-remote --exit-code --heads origin pages-deployment >/dev/null; then
+            git fetch --depth=1 origin pages-deployment
+            receipt_parent="$(git rev-parse FETCH_HEAD)"
+          fi
+          receipt_blob="$(git hash-object -w pages-deployment.json)"
+          receipt_tree="$(printf '100644 blob %s\tdeployment.json\n' "$receipt_blob" | git mktree)"
+          if [ -n "$receipt_parent" ]; then
+            receipt_commit="$(git commit-tree "$receipt_tree" -p "$receipt_parent" -m 'Record Pages deployment result')"
+          else
+            receipt_commit="$(git commit-tree "$receipt_tree" -m 'Record Pages deployment result')"
+          fi
+          git push origin "$receipt_commit:refs/heads/pages-deployment"

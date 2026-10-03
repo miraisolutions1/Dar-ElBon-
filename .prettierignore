@@ -7,3 +7,4 @@ package-lock.json
 public/images
 test-results
 playwright-report
+docs/index.html
