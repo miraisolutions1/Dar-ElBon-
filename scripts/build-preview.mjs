@@ -354,7 +354,7 @@ const result = await build({
   platform: 'browser',
   target: 'es2022',
   jsx: 'automatic',
-  define: { 'process.env.NODE_ENV': '"production"' },
+  define: { 'process.env.NODE_ENV': '"production"', 'import.meta.env': '{}' },
   loader: { '.woff2': 'dataurl', '.woff': 'dataurl' },
   plugins: [
     {

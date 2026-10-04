@@ -1,3 +1,4 @@
+import { isSupabaseEnabled } from './backend-config';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import {
   Link,
@@ -100,7 +101,7 @@ export function Login() {
   return (
     <main className="login-page">
       <div className="login-art">
-        <img src="/images/coffee-hero.png" alt="عبوة دار البن" />
+        <img src="/images/coffee-duo-hero.webp" alt="عبوة دار البن" />
         <div>
           <Brand />
           <h2>
@@ -123,13 +124,14 @@ export function Login() {
           <p>سجّل دخولك لمتابعة متجرك وطلباتك.</p>
           <Alert>{error}</Alert>
           <label className="field">
-            اسم الدخول
+            {isSupabaseEnabled ? 'البريد الإلكتروني' : 'اسم الدخول'}
             <input
+              type={isSupabaseEnabled ? 'email' : 'text'}
               name="username"
               autoComplete="username"
               dir="ltr"
               required
-              maxLength={40}
+              maxLength={isSupabaseEnabled ? 254 : 40}
               autoFocus
             />
           </label>
@@ -258,7 +260,11 @@ type DashboardData = {
   mode: string;
 };
 export function Dashboard() {
-  const { data, error, loading } = useAsync(() => api<DashboardData>('/admin/dashboard'));
+  const { data, error, loading } = useAsync(
+    () => api<DashboardData>('/admin/dashboard'),
+    [],
+    15000,
+  );
   if (loading) return <Loading />;
   if (error) return <Alert>{error}</Alert>;
   if (!data) return null;
@@ -429,6 +435,7 @@ export function Orders() {
   const { data, error, loading } = useAsync(
     () => api<{ orders: Order[]; total: number; page: number }>(`/admin/orders?${query}`),
     [query],
+    15000,
   );
   function update(k: string, v: string) {
     const next = new URLSearchParams(params);
@@ -791,7 +798,7 @@ const blankProduct = (): Product => ({
   brew: ['تركي'],
   kind: 'سادة',
   grinds: ['تركي ناعم'],
-  image: '/images/coffee-hero.png',
+  image: '/images/coffee-duo-hero.webp',
   active: false,
   featured: false,
   demo: true,
@@ -1661,7 +1668,7 @@ export function UsersPage() {
                   <small dir="ltr">{u.username}</small>
                 </div>
                 <span className="status">{u.role === 'owner' ? 'مالك' : 'مدير عمليات'}</span>
-                {u.id !== user.id && (
+                {!isSupabaseEnabled && u.id !== user.id && (
                   <button
                     className="icon-button danger-text"
                     aria-label={`حذف حساب ${u.name}`}
@@ -1682,49 +1689,68 @@ export function UsersPage() {
             ))
           )}
         </section>
-        <form className="panel" onSubmit={add}>
-          <h2>إضافة عضو</h2>
-          <label className="field">
-            الاسم
-            <input name="name" required minLength={2} maxLength={80} />
-          </label>
-          <label className="field">
-            اسم الدخول
-            <input
-              name="username"
-              dir="ltr"
-              required
-              pattern="[a-zA-Z0-9._\-]{3,40}"
-              autoComplete="off"
-            />
-          </label>
-          <label className="field">
-            كلمة المرور
-            <input
-              name="password"
-              type="password"
-              dir="ltr"
-              required
-              minLength={12}
-              maxLength={128}
-              autoComplete="new-password"
-            />
-            <small>12 حرفًا على الأقل.</small>
-          </label>
-          <label className="field">
-            الصلاحية
-            <select name="role">
-              <option value="manager">مدير عمليات — منتجات وطلبات</option>
-              <option value="owner">مالك — جميع الإعدادات والصلاحيات</option>
-            </select>
-          </label>
-          <Alert>{saveError}</Alert>
-          <Alert kind="success">{message}</Alert>
-          <button className="btn" disabled={busy}>
-            <Plus size={16} />
-            {busy ? 'جاري الإنشاء…' : 'إنشاء الحساب'}
-          </button>
-        </form>
+        {isSupabaseEnabled ? (
+          <section className="panel">
+            <h2>حسابات الدخول</h2>
+            <p>
+              إنشاء حسابات الفريق أو حذفها يتم من لوحة Supabase، مع إضافة صلاحية الإدارة للحساب
+              المعتمد فقط.
+            </p>
+            <a
+              className="btn secondary"
+              href="https://supabase.com/dashboard/project/cnrsgdeppzezjcqtvmck/auth/users"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              افتح حسابات الفريق <ExternalLink size={16} />
+            </a>
+          </section>
+        ) : (
+          <form className="panel" onSubmit={add}>
+            <h2>إضافة عضو</h2>
+            <label className="field">
+              الاسم
+              <input name="name" required minLength={2} maxLength={80} />
+            </label>
+            <label className="field">
+              {isSupabaseEnabled ? 'البريد الإلكتروني' : 'اسم الدخول'}
+              <input
+                type={isSupabaseEnabled ? 'email' : 'text'}
+                name="username"
+                dir="ltr"
+                required
+                pattern="[a-zA-Z0-9._\-]{3,40}"
+                autoComplete="off"
+              />
+            </label>
+            <label className="field">
+              كلمة المرور
+              <input
+                name="password"
+                type="password"
+                dir="ltr"
+                required
+                minLength={12}
+                maxLength={128}
+                autoComplete="new-password"
+              />
+              <small>12 حرفًا على الأقل.</small>
+            </label>
+            <label className="field">
+              الصلاحية
+              <select name="role">
+                <option value="manager">مدير عمليات — منتجات وطلبات</option>
+                <option value="owner">مالك — جميع الإعدادات والصلاحيات</option>
+              </select>
+            </label>
+            <Alert>{saveError}</Alert>
+            <Alert kind="success">{message}</Alert>
+            <button className="btn" disabled={busy}>
+              <Plus size={16} />
+              {busy ? 'جاري الإنشاء…' : 'إنشاء الحساب'}
+            </button>
+          </form>
+        )}
       </div>
     </>
   );

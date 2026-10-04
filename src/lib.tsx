@@ -1,3 +1,4 @@
+import { isSupabaseEnabled } from './backend-config';
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { LoadingScreen } from './loading-screen';
 
@@ -95,6 +96,15 @@ export class ApiError extends Error {
   }
 }
 export async function api<T>(url: string, options: RequestInit = {}): Promise<T> {
+  if (isSupabaseEnabled) {
+    try {
+      const { supabaseApi } = await import('./supabase-api');
+      return await supabaseApi<T>(url, options);
+    } catch (error) {
+      const problem = error as Error & { status?: number };
+      throw new ApiError(problem.message, problem.status || 500);
+    }
+  }
   const response = await fetch(`/api${url}`, {
     credentials: 'same-origin',
     ...options,
@@ -211,6 +221,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh().catch(() => {});
   }, [refresh]);
+  useEffect(() => {
+    if (!isSupabaseEnabled) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void refresh().catch(() => {});
+    }, 30000);
+    const focus = () => void refresh().catch(() => {});
+    window.addEventListener('focus', focus);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', focus);
+    };
+  }, [refresh]);
   if (!value) return <LoadingScreen error={error} retry={() => void refresh().catch(() => {})} />;
   return <StoreContext.Provider value={{ ...value, refresh }}>{children}</StoreContext.Provider>;
 }
@@ -272,7 +294,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 export function useCart() {
   return useContext(CartContext)!;
 }
-export function useAsync<T>(loader: () => Promise<T>, deps: unknown[] = []) {
+export function useAsync<T>(loader: () => Promise<T>, deps: unknown[] = [], pollMs = 0) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -295,5 +317,15 @@ export function useAsync<T>(loader: () => Promise<T>, deps: unknown[] = []) {
       active = false;
     };
   }, [...deps, version]);
+  useEffect(() => {
+    if (!pollMs || !isSupabaseEnabled) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      void loader()
+        .then(setData)
+        .catch(() => {});
+    }, pollMs);
+    return () => window.clearInterval(timer);
+  }, [...deps, pollMs]);
   return { data, error, loading, reload: () => setVersion((v) => v + 1), setData };
 }

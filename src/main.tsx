@@ -1,7 +1,8 @@
+import { isSupabaseEnabled } from './backend-config';
 import { DrinksMenu } from './drinks-menu';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route } from 'react-router-dom';
 import '@fontsource-variable/noto-sans-arabic';
 import '@fontsource-variable/noto-naskh-arabic';
 import '@fontsource-variable/cairo';
@@ -58,9 +59,10 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { err
     );
   }
 }
+const Router = isSupabaseEnabled ? HashRouter : BrowserRouter;
 createRoot(document.getElementById('root')!).render(
   <ErrorBoundary>
-    <BrowserRouter>
+    <Router>
       <StoreProvider>
         <CartProvider>
           <Routes>
@@ -97,6 +99,6 @@ createRoot(document.getElementById('root')!).render(
           </Routes>
         </CartProvider>
       </StoreProvider>
-    </BrowserRouter>
+    </Router>
   </ErrorBoundary>,
 );

@@ -1,0 +1,234 @@
+// Offline integration test of the real Supabase-backed Pages bundle. Auth/RPC
+// responses are routed fixtures; this does not test hosted SQL, RLS or deployment.
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { resolve, join } from 'node:path';
+import { chromium, expect } from '@playwright/test';
+import { openDatabase, allProducts, getSettings, orderView } from '../server/db.mjs';
+import { createAdmin } from '../server/auth.mjs';
+import { placeOrder, saveProduct } from '../server/store.mjs';
+
+const output = '.local/supabase-pages-test';
+execFileSync(process.execPath, ['scripts/build-supabase-pages.mjs'], {
+  stdio: 'inherit',
+  env: {
+    ...process.env,
+    VITE_SUPABASE_URL: 'https://test-project.supabase.co',
+    VITE_SUPABASE_ANON_KEY: 'sb_publishable_test',
+    SUPABASE_PAGES_OUT_DIR: output,
+  },
+});
+const html = readFileSync(join(output, 'index.html'), 'utf8');
+const email = 'owner@example.test';
+const password = 'Synthetic-test-password-2394!';
+assert(
+  !html.includes(email) && !html.includes(password),
+  'Credentials must not enter the static bundle',
+);
+const directory = mkdtempSync(join(tmpdir(), 'dar-supabase-browser-'));
+const db = openDatabase(directory);
+let browser;
+try {
+  const id = await createAdmin(db, {
+    username: 'supabase.fixture',
+    name: 'مدير الاختبار',
+    password,
+  });
+  const profile = { id, username: email, name: 'مدير الاختبار', role: 'owner' };
+  const jwt =
+    [
+      { alg: 'HS256', typ: 'JWT' },
+      {
+        sub: id,
+        aud: 'authenticated',
+        role: 'authenticated',
+        email,
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      },
+    ]
+      .map((part) => Buffer.from(JSON.stringify(part)).toString('base64url'))
+      .join('.') + '.test-signature';
+  const user = {
+    id,
+    aud: 'authenticated',
+    role: 'authenticated',
+    email,
+    email_confirmed_at: new Date().toISOString(),
+    app_metadata: { provider: 'email', providers: ['email'] },
+    user_metadata: {},
+    identities: [],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  const session = {
+    access_token: jwt,
+    refresh_token: 'fixture-refresh-token',
+    token_type: 'bearer',
+    expires_in: 3600,
+    user,
+  };
+  const calls = [];
+  browser = await chromium.launch({
+    executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium',
+    headless: true,
+  });
+  const context = await browser.newContext();
+  context.setDefaultTimeout(12000);
+  context.setDefaultNavigationTimeout(15000);
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.routeWebSocket('wss://test-project.supabase.co/**', (socket) => socket.close());
+  await page.route('**/*', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.hostname === 'pages.example') {
+      if (url.pathname === '/Dar-ElBon-/')
+        return route.fulfill({ contentType: 'text/html', body: html });
+      const path = resolve(output, '.' + url.pathname.replace(/^\/Dar-ElBon-/, ''));
+      if (!path.startsWith(resolve(output) + '/') || !existsSync(path))
+        return route.fulfill({ status: 404 });
+      return route.fulfill({ path });
+    }
+    if (url.hostname !== 'test-project.supabase.co') return route.abort();
+    const headers = {
+      'access-control-allow-origin': '*',
+      'access-control-allow-headers': '*',
+      'access-control-allow-methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    };
+    const respond = (data, status = 200) =>
+      route.fulfill({
+        status,
+        headers,
+        contentType: 'application/json',
+        body: JSON.stringify(data),
+      });
+    if (request.method() === 'OPTIONS') return respond({});
+    const body = request.postDataJSON();
+    if (url.pathname === '/auth/v1/token') {
+      if (url.searchParams.get('grant_type') === 'refresh_token') return respond(session);
+      return body.email === email && body.password === password
+        ? respond(session)
+        : respond({ message: 'Invalid login credentials', code: 'invalid_credentials' }, 400);
+    }
+    if (url.pathname === '/auth/v1/user') return respond(user);
+    if (url.pathname === '/auth/v1/logout') return respond({});
+    const name = url.pathname.split('/').pop();
+    calls.push({ name, body, authorization: request.headers().authorization });
+    try {
+      if (name === 'dar_store')
+        return respond({ settings: getSettings(db), products: allProducts(db, true) });
+      if (name === 'dar_place_order') return respond(placeOrder(db, body.input).order);
+      if (name === 'dar_track_order')
+        return respond(orderView(db.prepare('SELECT * FROM orders WHERE token=?').get(body.token)));
+      if (name === 'dar_admin') {
+        assert.equal(
+          request.headers().authorization,
+          `Bearer ${jwt}`,
+          'Admin RPC requires the authenticated session token',
+        );
+        const { action, payload } = body;
+        if (action === 'me') return respond(profile);
+        if (action === 'GET /admin/products') return respond(allProducts(db));
+        if (action.startsWith('PUT /admin/products/')) {
+          const { _query, ...product } = payload;
+          return respond(saveProduct(db, action.split('/').pop(), product, profile));
+        }
+        const orders = db
+          .prepare('SELECT * FROM orders ORDER BY id DESC')
+          .all()
+          .map((row) => orderView(row, true));
+        if (action === 'GET /admin/orders')
+          return respond({ orders, total: orders.length, page: 1 });
+        if (action.startsWith('GET /admin/orders/'))
+          return respond(orders.find((order) => String(order.id) === action.split('/').pop()));
+        if (action === 'GET /admin/dashboard')
+          return respond({
+            mode: 'preview',
+            stats: {
+              orders: orders.length,
+              pending: orders.length,
+              revenue: 0,
+              products: allProducts(db).length,
+              demoOrders: orders.length,
+            },
+            recentOrders: orders,
+            lowStock: [],
+            checks: [],
+          });
+      }
+      return respond({ message: 'Unexpected fixture route' }, 404);
+    } catch (error) {
+      errors.push(error.message);
+      return respond({ message: error.message, code: 'P0001' }, 400);
+    }
+  });
+  const site = 'https://pages.example/Dar-ElBon-/';
+  await page.goto(site + '#/admin');
+  await expect(page).toHaveURL(/#\/admin\/login$/);
+  assert.equal(
+    calls.filter((call) => call.name === 'dar_admin').length,
+    0,
+    'Signed-out visitors must not request privileged data',
+  );
+  await page.getByLabel('البريد الإلكتروني').fill(email);
+  await page.getByLabel('كلمة المرور', { exact: true }).fill('Wrong-synthetic-password!');
+  await page.getByRole('button', { name: 'دخول لوحة الإدارة' }).click();
+  await expect(page.getByRole('alert')).toContainText('غير صحيحين');
+  await page.getByLabel('كلمة المرور', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'دخول لوحة الإدارة' }).click();
+  await expect(page.getByRole('heading', { name: 'صباح القهوة ☕' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'صباح القهوة ☕' })).toBeVisible();
+  await page.getByRole('link', { name: 'المنتجات', exact: true }).click();
+  await page.getByRole('link', { name: 'تعديل توليفة دار البن البرازيلي', exact: true }).click();
+  await page.getByLabel('السعر (ج.م)', { exact: true }).first().fill('201');
+  await page.getByRole('button', { name: 'حفظ المنتج', exact: true }).click();
+  await expect(page).toHaveURL(/#\/admin\/products$/);
+  const save = calls.find(
+    (call) => call.name === 'dar_admin' && call.body.action.startsWith('PUT /admin/products/'),
+  );
+  assert.equal(save.body.payload.variants[0].price, 20100);
+  await page.goto(site + '#/blend');
+  await expect(page.locator('.bb-origin')).toHaveCount(8);
+  await expect(page.getByText(email, { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'زيادة كمية البن إثيوبي 50 جم' }).click();
+  await page.getByRole('button', { name: 'أضف التوليفة للسلة', exact: true }).click();
+  await page.getByRole('link', { name: 'كمّل الطلب', exact: true }).click();
+  await page.reload();
+  await expect(page.locator('.cart-item')).toContainText('إثيوبي 50 جم');
+  await page.getByRole('link', { name: 'كمّل الطلب', exact: true }).click();
+  await page.getByRole('radio', { name: 'استلام من الفرع', exact: true }).check();
+  await page.getByLabel('الاسم بالكامل').fill('عميل التكامل');
+  await page.getByLabel('رقم الموبايل').fill('01012345678');
+  await page.getByLabel('فرع الاستلام').selectOption('1');
+  await page.getByRole('button', { name: 'تأكيد الطلب التجريبي' }).click();
+  await expect(page).toHaveURL(/#\/order\/[a-f0-9]{64}$/);
+  await expect(page.locator('.pickup-confirmation')).toContainText('مدينة نصر');
+  await expect(page.locator('.checkout-line').first()).toContainText('إثيوبي 50 جم');
+  const submitted = calls.find((call) => call.name === 'dar_place_order').body.input;
+  assert.equal(submitted.fulfillment, 'pickup');
+  assert.equal(submitted.pickupBranchIndex, 1);
+  assert.equal(submitted.expectedTotal, 28000);
+  assert.equal(submitted.items[0].type, 'blend');
+  assert.deepEqual(
+    submitted.items[0].components.map((component) => component.grams),
+    [150, 100, 50],
+  );
+  const reference = (await page.locator('.order-success strong').textContent()).trim();
+  await page.goto(site + '#/admin/orders');
+  await page.getByRole('link', { name: reference, exact: true }).click();
+  await expect(page.locator('.order-item')).toContainText('إثيوبي: 50 جم');
+  await expect(page.getByRole('heading', { name: /الاستلام من فرع.*مدينة نصر/ })).toBeVisible();
+  assert.deepEqual(errors, []);
+  console.log(
+    'Supabase Pages offline browser integration passed: auth, session persistence, authenticated price edit, blend pickup checkout and admin order.',
+  );
+} finally {
+  if (browser) await browser.close();
+  db.close();
+  rmSync(directory, { recursive: true, force: true });
+}

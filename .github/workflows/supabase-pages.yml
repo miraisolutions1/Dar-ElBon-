@@ -1,0 +1,103 @@
+name: Publish Supabase storefront
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the main branch
+        env:
+          TASK_BRANCH: ${{ github.ref_name }}
+        run: |
+          if [ "$TASK_BRANCH" != main ]; then
+            echo 'Run this manual workflow from main.' >&2
+            exit 1
+          fi
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Use Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Preserve existing Pages configuration
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/pages" > "$RUNNER_TEMP/dar-pages.json"
+          node - "$RUNNER_TEMP/dar-pages.json" <<'JS'
+          const fs = require('node:fs');
+          const pages = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          if (pages.build_type !== 'legacy' || pages.source?.branch !== 'main' || pages.source?.path !== '/docs') {
+            throw new Error('This workflow requires existing Pages publishing from main /docs. Configure that source in repository Settings → Pages first.');
+          }
+          JS
+      - name: Verify the configured database is ready
+        env:
+          TASK_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          TASK_SUPABASE_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          node <<'JS'
+          const { readFileSync } = await import('node:fs');
+          const config = JSON.parse(readFileSync('content/supabase-public-config.json', 'utf8'));
+          const url = process.env.TASK_SUPABASE_URL || config.projectUrl;
+          const key = process.env.TASK_SUPABASE_KEY || config.publishableKey;
+          if (!url || !key) throw new Error('Set the public Supabase repository variables first.');
+          const response = await fetch(url + '/rest/v1/rpc/dar_store', {
+            method: 'POST', headers: { apikey: key, 'Content-Type': 'application/json' }, body: '{}'
+          });
+          const data = await response.json();
+          if (!response.ok || !data.settings || !Array.isArray(data.products) || !data.products.length) {
+            throw new Error('Supabase tables/catalog are not ready. Run supabase/setup.sql in SQL Editor before publishing.');
+          }
+          const privateResponse = await fetch(url + '/rest/v1/dar_orders?select=id&limit=1', { headers: { apikey: key } });
+          if (privateResponse.ok) throw new Error('Order access must be private. Review SQL grants before publishing.');
+          console.log('Database catalog and anonymous order-access protection verified.');
+          JS
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify and build the connected storefront
+        env:
+          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          npm run build
+          node scripts/build-supabase-pages.mjs
+      - name: Save the reviewable site artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-storefront-pages
+          path: docs
+          include-hidden-files: true
+      - name: Commit the generated site
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish Supabase-backed storefront'
+            git push origin HEAD:main
+          fi
+      # GITHUB_TOKEN commits do not automatically start Pages builds, so ask for
+      # a native branch build explicitly without changing the Pages source.
+      - name: Request the native GitHub Pages build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh api --method POST "repos/$GITHUB_REPOSITORY/pages/builds" > "$RUNNER_TEMP/dar-pages-build.json"; then
+            echo '::error::The site was built and committed, but GitHub refused the Pages build request. Download the artifact or request a Pages rebuild as the repository owner. The Pages source was not changed.'
+            exit 1
+          fi
+          echo 'GitHub accepted the Pages build request. Check the native pages-build-deployment run before sharing the updated link.'
