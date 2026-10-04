@@ -87,6 +87,31 @@ run('Supabase SQL denies direct private table access and non-admin RPC calls', (
   assert.equal(catalog.products.length, 10);
   assert(!JSON.stringify(catalog).includes('owner@example'));
 });
+run('Supabase SQL admin read screens and repair preserve catalog and permissions', () => {
+  const readAdmin = (action) =>
+    JSON.parse(
+      sql(as('authenticated', owner, `SELECT public.dar_admin('${action}','{}');`))
+        .split('\n')
+        .at(-1),
+    );
+  const before = JSON.parse(sql('SELECT public.dar_store();'));
+  sql(readFileSync('supabase/fix-admin-queries.sql', 'utf8'));
+  assert.deepEqual(JSON.parse(sql('SELECT public.dar_store();')), before);
+  const dashboard = readAdmin('GET /admin/dashboard');
+  assert.equal(dashboard.stats.products, 10);
+  assert.equal(dashboard.stats.orders, 0);
+  assert(Array.isArray(dashboard.lowStock));
+  assert.equal(readAdmin('GET /admin/products').length, 10);
+  assert.equal(readAdmin('GET /admin/settings').mode, 'preview');
+  assert.deepEqual(readAdmin('GET /admin/orders').orders, []);
+  assert.equal(readAdmin('GET /admin/users').length, 2);
+  assert.deepEqual(readAdmin('GET /admin/audit'), []);
+  assert.throws(
+    () =>
+      sql(as('authenticated', stranger, "SELECT public.dar_admin('GET /admin/dashboard','{}');")),
+    /مصرح/,
+  );
+});
 run(
   'Supabase SQL canonical blends persist, redact tracking, replay once and snapshot pickup branch',
   () => {
