@@ -233,7 +233,9 @@ export function AdminShell() {
             </button>
             <span className="admin-mode">
               <i />
-              {settings.mode === 'preview' ? 'المتجر في وضع المعاينة' : 'المتجر يستقبل الطلبات'}
+              {settings.mode === 'live' && settings.codEnabled
+                ? 'المتجر يستقبل الطلبات'
+                : 'استقبال الطلبات متوقف'}
             </span>
           </div>
           <div className="admin-user">
@@ -291,7 +293,9 @@ export function Dashboard() {
       label: 'إجمالي الطلبات',
       value: data.stats.orders,
       icon: FileText,
-      detail: `منها ${data.stats.demoOrders} طلبات تجريبية`,
+      detail: data.stats.demoOrders
+        ? `${data.stats.demoOrders} طلبات سابقة غير تجارية`
+        : 'طلبات المتجر المسجّلة',
     },
   ];
   return (
@@ -336,7 +340,9 @@ export function Dashboard() {
             <h2>{data.mode === 'preview' ? 'تجهيز الافتتاح' : 'حالة المتجر'}</h2>
             <ShieldCheck size={20} />
           </div>
-          <p className="muted tiny">البيانات التجريبية لا تُحتسب كمبيعات فعلية.</p>
+          {data.stats.demoOrders > 0 && (
+            <p className="muted tiny">الطلبات السابقة غير التجارية لا تُحتسب كمبيعات فعلية.</p>
+          )}
           <div className="checklist">
             {data.checks.map((c) => (
               <div key={c.label}>
@@ -401,7 +407,7 @@ function OrderTable({ orders }: { orders: Order[] }) {
                 <Link className="table-link" to={`/admin/orders/${o.id}`} dir="ltr">
                   {o.reference}
                 </Link>
-                {o.demo && <span className="demo-badge">تجريبي</span>}
+                {o.demo && <span className="demo-badge">غير تجاري</span>}
               </td>
               <td>{o.customer.name}</td>
               <td>
@@ -538,6 +544,7 @@ export function OrderDetail() {
         paymentStatus: payment,
         note,
         tracking,
+        updatedAt: order?.updatedAt,
       });
       setMessage('تم تحديث الطلب.');
       reload();
@@ -559,7 +566,9 @@ export function OrderDetail() {
           كل الطلبات <ArrowLeft size={16} />
         </Link>
       </AdminHeading>
-      {order.demo && <Alert kind="info">طلب تجريبي — لا يُشحن ولا يُحتسب كمبيعات فعلية.</Alert>}
+      {order.demo && (
+        <Alert kind="info">طلب سابق غير تجاري — لا يُشحن ولا يُحتسب كمبيعات فعلية.</Alert>
+      )}
       <section className="panel">
         <h2>
           {pickup
@@ -691,6 +700,18 @@ export function OrderDetail() {
           </Alert>
         )}
         <Alert>{saveError}</Alert>
+        {saveError && (
+          <button
+            type="button"
+            className="btn secondary small"
+            onClick={() => {
+              setSaveError('');
+              reload();
+            }}
+          >
+            تحديث بيانات الطلب
+          </button>
+        )}
         <Alert kind="success">{message}</Alert>
         <button className="btn" disabled={busy}>
           <Save size={17} />
@@ -756,7 +777,9 @@ export function Products() {
                         </div>
                       </Link>
                     </td>
-                    <td>{money(p.variants[0]?.price || 0)}</td>
+                    <td>
+                      {money(p.variants.length ? Math.min(...p.variants.map((v) => v.price)) : 0)}
+                    </td>
                     <td>
                       {p.stockMode === 'grams'
                         ? `${p.stockGrams} جم`
@@ -766,7 +789,7 @@ export function Products() {
                       <span className={`status ${p.active ? 'confirmed' : 'cancelled'}`}>
                         {p.active ? 'نشط' : 'مخفي'}
                       </span>
-                      {p.demo && <span className="demo-badge">بيانات تجريبية</span>}
+                      {p.demo && <span className="demo-badge">بانتظار الاعتماد</span>}
                     </td>
                     <td>
                       <Link
@@ -804,7 +827,7 @@ const blankProduct = (): Product => ({
   demo: true,
   stockMode: 'units',
   stockGrams: 0,
-  variants: [{ weight: 250, price: 18000, stock: 0 }],
+  variants: [{ weight: 250, price: 0, stock: 0 }],
 });
 export function ProductEditor() {
   const { id } = useParams();
@@ -815,31 +838,60 @@ export function ProductEditor() {
   const nav = useNavigate();
   const { refresh } = useStore();
   useEffect(() => {
+    let cancelled = false;
+    setError('');
+    setProduct(null);
     if (isNew) {
       setProduct(blankProduct());
       return;
     }
     api<Product[]>('/admin/products')
       .then((rows) => {
+        if (cancelled) return;
         const p = rows.find((p) => p.id === id);
         if (p) setProduct(p);
         else setError('المنتج غير موجود.');
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => {
+        if (!cancelled) setError(e.message);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [id, isNew]);
   function patch<K extends keyof Product>(key: K, value: Product[K]) {
     setProduct((p) => (p ? { ...p, [key]: value } : p));
   }
   async function save(e: FormEvent) {
     e.preventDefault();
+    if (!product) return;
+    const grinds = [...new Set(product.grinds.map((grind) => grind.trim()).filter(Boolean))];
+    if (!grinds.length || grinds.length > 8) {
+      setError('أضف طحنة واحدة على الأقل، وبحد أقصى ٨ طحنات مختلفة.');
+      return;
+    }
+    if (
+      product.kind === 'حبوب للتوليف' &&
+      (product.stockMode !== 'grams' || !product.variants.some((variant) => variant.weight === 50))
+    ) {
+      setError('حبوب التوليف تحتاج مخزونًا بالجرامات ووزن ٥٠ جم لتحديد سعر كل جزء من التوليفة.');
+      return;
+    }
+    if (!product.brew.length) {
+      setError('اختار طريقة تحضير واحدة على الأقل.');
+      return;
+    }
+    if (new Set(product.variants.map((v) => v.weight)).size !== product.variants.length) {
+      setError('كل وزن لازم يظهر مرة واحدة فقط.');
+      return;
+    }
     setBusy(true);
     setError('');
     try {
-      await send(
-        isNew ? '/admin/products' : `/admin/products/${id}`,
-        isNew ? 'POST' : 'PUT',
-        product,
-      );
+      await send(isNew ? '/admin/products' : `/admin/products/${id}`, isNew ? 'POST' : 'PUT', {
+        ...product,
+        grinds,
+      });
       await refresh();
       nav('/admin/products');
     } catch (err) {
@@ -898,12 +950,24 @@ export function ProductEditor() {
               <div className="form-grid">
                 <label className="field">
                   النوع
-                  <input
-                    value={product.kind}
-                    required
-                    onChange={(e) => patch('kind', e.target.value)}
-                    placeholder="سادة / محوج"
-                  />
+                  <select value={product.kind} onChange={(e) => patch('kind', e.target.value)}>
+                    {[
+                      'سادة',
+                      'محوج',
+                      'حبوب للتوليف',
+                      ...(!['سادة', 'محوج', 'حبوب للتوليف'].includes(product.kind)
+                        ? [product.kind]
+                        : []),
+                    ].map((kind) => (
+                      <option key={kind} value={kind}>
+                        {kind}
+                      </option>
+                    ))}
+                  </select>
+                  <small>
+                    سادة ومحوج للمتجر. حبوب للتوليف تظهر في «كوّن توليفتك» فقط؛ أضف أصل البن في اسم
+                    المنتج.
+                  </small>
                 </label>
                 <label className="field">
                   التحميص
@@ -951,10 +1015,18 @@ export function ProductEditor() {
                 <button
                   type="button"
                   className="btn secondary small"
+                  disabled={product.variants.length >= 12}
                   onClick={() =>
                     patch('variants', [
                       ...product.variants,
-                      { weight: 1000, price: 10000, stock: 0 },
+                      {
+                        weight:
+                          [250, 500, 1000, 100, 50].find(
+                            (weight) => !product.variants.some((v) => v.weight === weight),
+                          ) || Math.max(...product.variants.map((v) => v.weight)) + 1,
+                        price: 0,
+                        stock: 0,
+                      },
                     ])
                   }
                 >
@@ -1076,8 +1148,7 @@ export function ProductEditor() {
               <ImageUpload value={product.image} onChange={(url) => patch('image', url)} />
               {product.image.startsWith('/images/') && (
                 <p className="tiny muted">
-                  الصورة الأولية تصورية مستوحاة من العبوة المرفقة. استبدلها بالصورة الأصلية المعتمدة
-                  قبل البيع.
+                  راجع تطابق صورة العبوة مع نوع المنتج قبل إظهاره للعملاء.
                 </p>
               )}
             </section>
@@ -1102,14 +1173,14 @@ export function ProductEditor() {
               <label className="check-label">
                 <input
                   type="checkbox"
-                  checked={product.demo}
-                  onChange={(e) => patch('demo', e.target.checked)}
+                  checked={!product.demo}
+                  onChange={(e) => patch('demo', !e.target.checked)}
                 />
-                بيانات تجريبية لم تُعتمد بعد
+                الصورة والسعر والوزن والمعلومات معتمدة
               </label>
               <p className="tiny muted">
-                ألغِ علامة البيانات التجريبية بعد اعتماد الصورة والسعر والوزن والتفاصيل الفعلية
-                للمنتج.
+                اعتمد بيانات المنتج بعد مراجعتها. المنتجات غير المعتمدة لا تستقبل طلبات في وضع البيع
+                الفعلي.
               </p>
             </section>
           </aside>
@@ -1132,6 +1203,14 @@ export function ProductEditor() {
 export function SettingsPage({ contentOnly = false }: { contentOnly?: boolean }) {
   const { user } = useOutletContext<{ user: User }>();
   const { data, error, loading } = useAsync(() => api<Settings>('/admin/settings'));
+  const {
+    data: launchProducts,
+    error: launchError,
+    loading: checkingLaunch,
+  } = useAsync(
+    () => (contentOnly ? Promise.resolve([] as Product[]) : api<Product[]>('/admin/products')),
+    [contentOnly],
+  );
   const [settings, setSettings] = useState<Settings | null>(null);
   const [tab, setTab] = useState('general');
   const [busy, setBusy] = useState(false);
@@ -1146,12 +1225,58 @@ export function SettingsPage({ contentOnly = false }: { contentOnly?: boolean })
   if (error) return <Alert>{error}</Alert>;
   if (!settings) return null;
   const s = settings;
+  const activeProducts = (launchProducts || []).filter((product) => product.active);
+  const launchChecks = [
+    {
+      label: 'كل المنتجات الظاهرة معتمدة',
+      ok: activeProducts.length > 0 && activeProducts.every((product) => !product.demo),
+    },
+    {
+      label: 'فرع متاح للاستلام أو منطقة توصيل فعلية',
+      ok:
+        (s.branches || []).some(
+          (branch) => branch.enabled !== false && branch.name.trim() && branch.address.trim(),
+        ) ||
+        s.shippingZones.some(
+          (zone) =>
+            zone.enabled &&
+            zone.id !== 'demo-zone' &&
+            !zone.name.includes('تجريب') &&
+            zone.name.trim() &&
+            zone.eta.trim(),
+        ),
+    },
+    {
+      label: 'وسيلة تواصل وسياسات شحن واسترجاع وخصوصية مكتملة',
+      ok: Boolean(
+        s.contactPhone.trim() &&
+        s.shippingPolicy.trim() &&
+        s.returnsPolicy.trim() &&
+        s.privacyPolicy.trim(),
+      ),
+    },
+    { label: 'الدفع عند الاستلام مفعّل', ok: s.codEnabled },
+  ];
   function patch<K extends keyof Settings>(key: K, value: Settings[K]) {
     setSettings((prev) => (prev ? { ...prev, [key]: value } : prev));
     setMessage('');
   }
   async function save(e: FormEvent) {
     e.preventDefault();
+    if (s.mode === 'live' && s.codEnabled && !contentOnly) {
+      if (checkingLaunch || launchError) {
+        setSaveError('تعذّر التحقق من المنتجات. أعد فتح الإعدادات قبل تفعيل استقبال الطلبات.');
+        return;
+      }
+      const missing = launchChecks.filter((check) => !check.ok);
+      if (missing.length) {
+        setTab('general');
+        setSaveError(
+          `قبل تفعيل استقبال الطلبات: ${missing.map((check) => check.label).join(' · ')}.`,
+        );
+        return;
+      }
+    }
     setBusy(true);
     setSaveError('');
     setMessage('');
@@ -1218,6 +1343,20 @@ export function SettingsPage({ contentOnly = false }: { contentOnly?: boolean })
                     setMessage('');
                   }}
                 />
+                <label className="field">
+                  مسار فيديو الافتتاحية
+                  <input
+                    dir="ltr"
+                    value={s.heroVideo || ''}
+                    maxLength={300}
+                    placeholder="/media/coffee-duo-loop.mp4"
+                    onChange={(e) => patch('heroVideo', e.target.value)}
+                  />
+                  <small>
+                    استخدم ملف MP4 منشورًا في مجلد media بالموقع. اتركه فارغًا لعرض الصورة فقط؛
+                    تغيير الصورة يوقف الفيديو الحالي.
+                  </small>
+                </label>
               </section>
               <section className="panel">
                 <h2>حكاية دار البن</h2>
@@ -1322,7 +1461,11 @@ export function SettingsPage({ contentOnly = false }: { contentOnly?: boolean })
                           patch(
                             'branches',
                             s.branches.map((b, i) =>
-                              i === index ? { ...b, main: e.target.checked } : b,
+                              i === index
+                                ? { ...b, main: e.target.checked }
+                                : e.target.checked
+                                  ? { ...b, main: false }
+                                  : b,
                             ),
                           )
                         }
@@ -1349,53 +1492,63 @@ export function SettingsPage({ contentOnly = false }: { contentOnly?: boolean })
             </div>
             <aside className="panel self-start">
               <h2>ترتيب وإظهار الأقسام</h2>
-              <p className="muted tiny">الترتيب من أعلى الصفحة إلى أسفلها.</p>
-              {s.sections.map((key, index) => (
-                <div className="section-control" key={key}>
-                  <span>{sectionNames[key]}</span>
-                  <button
-                    type="button"
-                    className="icon-button"
-                    aria-label={`رفع ${sectionNames[key]}`}
-                    disabled={!index}
-                    onClick={() => {
-                      const a = [...s.sections];
-                      [a[index - 1], a[index]] = [a[index], a[index - 1]];
-                      patch('sections', a);
-                    }}
-                  >
-                    <ArrowUp size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    className="icon-button"
-                    aria-label={`خفض ${sectionNames[key]}`}
-                    disabled={index === s.sections.length - 1}
-                    onClick={() => {
-                      const a = [...s.sections];
-                      [a[index + 1], a[index]] = [a[index], a[index + 1]];
-                      patch('sections', a);
-                    }}
-                  >
-                    <ArrowDown size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    className="icon-button"
-                    aria-label={`إخفاء ${sectionNames[key]}`}
-                    onClick={() =>
-                      patch(
-                        'sections',
-                        s.sections.filter((k) => k !== key),
-                      )
-                    }
-                  >
-                    <X size={15} />
-                  </button>
-                </div>
-              ))}
+              <p className="muted tiny">
+                المتجر ثابت بعد المساحة الافتتاحية. رتّب باقي الأقسام من أعلى الصفحة إلى أسفلها.
+              </p>
+              {s.sections
+                .filter((key) => key !== 'featured')
+                .map((key) => {
+                  const index = s.sections.indexOf(key);
+                  const displayed = s.sections.filter((section) => section !== 'featured');
+                  return (
+                    <div className="section-control" key={key}>
+                      <span>{sectionNames[key]}</span>
+                      <button
+                        type="button"
+                        className="icon-button"
+                        aria-label={`رفع ${sectionNames[key]}`}
+                        disabled={displayed.indexOf(key) === 0}
+                        onClick={() => {
+                          const a = [...s.sections];
+                          const previous = a.indexOf(displayed[displayed.indexOf(key) - 1]);
+                          [a[previous], a[index]] = [a[index], a[previous]];
+                          patch('sections', a);
+                        }}
+                      >
+                        <ArrowUp size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-button"
+                        aria-label={`خفض ${sectionNames[key]}`}
+                        disabled={displayed.indexOf(key) === displayed.length - 1}
+                        onClick={() => {
+                          const a = [...s.sections];
+                          const next = a.indexOf(displayed[displayed.indexOf(key) + 1]);
+                          [a[next], a[index]] = [a[index], a[next]];
+                          patch('sections', a);
+                        }}
+                      >
+                        <ArrowDown size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-button"
+                        aria-label={`إخفاء ${sectionNames[key]}`}
+                        onClick={() =>
+                          patch(
+                            'sections',
+                            s.sections.filter((k) => k !== key),
+                          )
+                        }
+                      >
+                        <X size={15} />
+                      </button>
+                    </div>
+                  );
+                })}
               {Object.keys(sectionNames)
-                .filter((key) => !s.sections.includes(key))
+                .filter((key) => key !== 'featured' && !s.sections.includes(key))
                 .map((key) => (
                   <button
                     className="btn secondary small full"
@@ -1429,6 +1582,31 @@ export function SettingsPage({ contentOnly = false }: { contentOnly?: boolean })
             </div>
             {tab === 'general' && (
               <section className="panel">
+                <h2>مراجعة التشغيل</h2>
+                <p className="tiny muted">
+                  تتحدث القائمة حسب تعديلاتك هنا وبيانات المنتجات المحفوظة. الحفظ يتحقق منها على
+                  الخادم قبل فتح استقبال الطلبات.
+                </p>
+                <Alert>{launchError}</Alert>
+                {checkingLaunch ? (
+                  <Loading />
+                ) : (
+                  <div className="checklist">
+                    {launchChecks.map((check) => (
+                      <div key={check.label}>
+                        {check.ok ? (
+                          <Check className="success-text" size={18} />
+                        ) : (
+                          <AlertCircle size={18} />
+                        )}
+                        <span>{check.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <Link className="text-link" to="/admin/products">
+                  راجع المنتجات والأسعار <ArrowLeft size={15} />
+                </Link>
                 <h2>بيانات المتجر</h2>
                 <div className="form-grid">
                   <label className="field">
@@ -1445,8 +1623,8 @@ export function SettingsPage({ contentOnly = false }: { contentOnly?: boolean })
                       value={s.mode}
                       onChange={(e) => patch('mode', e.target.value as 'preview' | 'live')}
                     >
-                      <option value="preview">معاينة — طلبات تجريبية</option>
-                      <option value="live">بيع فعلي — بيانات معتمدة</option>
+                      <option value="preview">تجهيز المتجر — استقبال الطلبات غير مفعّل</option>
+                      <option value="live">استقبال الطلبات — بيع فعلي</option>
                     </select>
                   </label>
                   <label className="field">
@@ -1477,8 +1655,9 @@ export function SettingsPage({ contentOnly = false }: { contentOnly?: boolean })
                   </label>
                 </div>
                 <Alert kind="info">
-                  البيع الفعلي يتطلب منتجات ببيانات معتمدة، منطقة شحن حقيقية، وبيانات تواصل وسياسات
-                  مكتملة. النشر على الإنترنت يتم على خادم مستقل يدعم HTTPS وقرصًا دائمًا.
+                  البيع الفعلي يتطلب منتجات ببيانات معتمدة، فرع استلام أو منطقة توصيل فعلية، وبيانات
+                  تواصل وسياسات مكتملة. راجع قائمة حالة المتجر في النظرة العامة قبل تفعيل استقبال
+                  الطلبات.
                 </Alert>
               </section>
             )}
@@ -1576,8 +1755,8 @@ export function SettingsPage({ contentOnly = false }: { contentOnly?: boolean })
                     تفعيل الدفع عند الاستلام
                   </label>
                   <p className="muted">
-                    المدفوعات الإلكترونية تحتاج مزوّد دفع معتمد وربطًا منفصلًا؛ لا يتم تحصيل أي مبلغ
-                    إلكتروني في هذه النسخة.
+                    المتاح حاليًا هو الدفع عند الاستلام من الفرع أو مع التوصيل. تحصيل المدفوعات
+                    الإلكترونية يحتاج ربط مزوّد دفع معتمد.
                   </p>
                 </section>
               </>
@@ -1624,10 +1803,17 @@ export function SettingsPage({ contentOnly = false }: { contentOnly?: boolean })
 
 export function UsersPage() {
   const { user } = useOutletContext<{ user: User }>();
-  const { data, error, loading, reload } = useAsync(() => api<User[]>('/admin/users'));
+  const { data, error, loading, reload } = useAsync(() =>
+    api<(User & { active?: boolean })[]>('/admin/users'),
+  );
   const [message, setMessage] = useState('');
   const [saveError, setSaveError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [member, setMember] = useState<{ id: string; name: string; role: 'owner' | 'manager' }>({
+    id: '',
+    name: '',
+    role: 'manager',
+  });
   if (user.role !== 'owner') return <Alert>هذا القسم لمالك المتجر فقط.</Alert>;
   async function add(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -1637,10 +1823,18 @@ export function UsersPage() {
     setSaveError('');
     setMessage('');
     try {
-      await send('/admin/users', 'POST', Object.fromEntries(f));
+      await send('/admin/users', 'POST', {
+        ...Object.fromEntries(f),
+        ...(isSupabaseEnabled ? { active: true } : {}),
+      });
       form.reset();
+      setMember({ id: '', name: '', role: 'manager' });
       reload();
-      setMessage('تم إنشاء الحساب. شارك بيانات دخوله مع صاحبه بطريقة آمنة.');
+      setMessage(
+        isSupabaseEnabled
+          ? 'تم حفظ صلاحية الإدارة للحساب.'
+          : 'تم إنشاء الحساب. شارك بيانات دخوله مع صاحبه بطريقة آمنة.',
+      );
     } catch (err) {
       setSaveError((err as Error).message);
     } finally {
@@ -1667,13 +1861,36 @@ export function UsersPage() {
                   <strong>{u.name}</strong>
                   <small dir="ltr">{u.username}</small>
                 </div>
-                <span className="status">{u.role === 'owner' ? 'مالك' : 'مدير عمليات'}</span>
-                {!isSupabaseEnabled && u.id !== user.id && (
+                <span className="status">
+                  {u.active === false ? 'وصول متوقف' : u.role === 'owner' ? 'مالك' : 'مدير عمليات'}
+                </span>
+                {isSupabaseEnabled && (
+                  <button
+                    className="icon-button"
+                    aria-label={`تعديل صلاحية ${u.name}`}
+                    onClick={() => {
+                      setMember({ id: u.id, name: u.name, role: u.role });
+                      document
+                        .getElementById('team-access-form')
+                        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }}
+                  >
+                    <Pencil size={16} />
+                  </button>
+                )}
+                {u.id !== user.id && u.active !== false && (
                   <button
                     className="icon-button danger-text"
-                    aria-label={`حذف حساب ${u.name}`}
+                    aria-label={isSupabaseEnabled ? `إيقاف صلاحية ${u.name}` : `حذف حساب ${u.name}`}
                     onClick={async () => {
-                      if (!window.confirm(`حذف حساب ${u.name} وإنهاء جلساته؟`)) return;
+                      if (
+                        !window.confirm(
+                          isSupabaseEnabled
+                            ? `إيقاف وصول ${u.name} للوحة الإدارة؟ حساب الدخول لن يُحذف.`
+                            : `حذف حساب ${u.name} وإنهاء جلساته؟`,
+                        )
+                      )
+                        return;
                       try {
                         await send(`/admin/users/${u.id}`, 'DELETE');
                         reload();
@@ -1690,21 +1907,63 @@ export function UsersPage() {
           )}
         </section>
         {isSupabaseEnabled ? (
-          <section className="panel">
-            <h2>حسابات الدخول</h2>
-            <p>
-              إنشاء حسابات الفريق أو حذفها يتم من لوحة Supabase، مع إضافة صلاحية الإدارة للحساب
-              المعتمد فقط.
+          <form id="team-access-form" className="panel" onSubmit={add}>
+            <h2>منح أو تعديل صلاحية الإدارة</h2>
+            <p className="tiny muted">
+              أنشئ حساب الدخول أولًا في Authentication → Users بحساب مؤكد، ثم انسخ User UID هنا.
+              كلمة المرور تُدار من Supabase ولا تُحفظ في الموقع.
             </p>
             <a
-              className="btn secondary"
+              className="text-link"
               href="https://supabase.com/dashboard/project/cnrsgdeppzezjcqtvmck/auth/users"
               target="_blank"
               rel="noopener noreferrer"
             >
-              افتح حسابات الفريق <ExternalLink size={16} />
+              افتح حسابات الدخول <ExternalLink size={16} />
             </a>
-          </section>
+            <label className="field">
+              User UID
+              <input
+                name="id"
+                dir="ltr"
+                value={member.id}
+                onChange={(e) => setMember({ ...member, id: e.target.value.trim() })}
+                required
+                pattern="[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+                maxLength={36}
+              />
+            </label>
+            <label className="field">
+              الاسم
+              <input
+                name="name"
+                value={member.name}
+                onChange={(e) => setMember({ ...member, name: e.target.value })}
+                required
+                minLength={2}
+                maxLength={80}
+              />
+            </label>
+            <label className="field">
+              الصلاحية
+              <select
+                name="role"
+                value={member.role}
+                onChange={(e) =>
+                  setMember({ ...member, role: e.target.value as 'owner' | 'manager' })
+                }
+              >
+                <option value="manager">مدير عمليات — منتجات وطلبات</option>
+                <option value="owner">مالك — جميع الإعدادات والصلاحيات</option>
+              </select>
+            </label>
+            <Alert>{saveError}</Alert>
+            <Alert kind="success">{message}</Alert>
+            <button className="btn" disabled={busy}>
+              {busy ? 'جاري الحفظ…' : 'حفظ صلاحية الإدارة'}
+              <ShieldCheck size={16} />
+            </button>
+          </form>
         ) : (
           <form className="panel" onSubmit={add}>
             <h2>إضافة عضو</h2>
@@ -1765,6 +2024,10 @@ const auditLabels: Record<string, string> = {
   'admin.created': 'إضافة عضو',
   'admin.deleted': 'حذف عضو',
   'media.uploaded': 'رفع صورة',
+  'product.saved': 'حفظ منتج',
+  'product.hidden': 'إخفاء منتج',
+  'admin.updated': 'تعديل صلاحية عضو',
+  'admin.revoked': 'إيقاف صلاحية عضو',
 };
 export function AuditPage() {
   const { data, error, loading } = useAsync(() =>
@@ -1779,6 +2042,11 @@ export function AuditPage() {
       <section className="panel no-padding">
         {loading ? (
           <Loading />
+        ) : !data?.length ? (
+          <Empty
+            title="لا توجد عمليات مسجّلة"
+            description="عمليات الإدارة هتظهر هنا بعد حفظ المنتجات والطلبات والإعدادات."
+          />
         ) : (
           <div className="table-scroll">
             <table>
@@ -1786,6 +2054,7 @@ export function AuditPage() {
                 <tr>
                   <th>العملية</th>
                   <th>المستخدم</th>
+                  <th>السجل المرتبط</th>
                   <th>التوقيت</th>
                 </tr>
               </thead>
@@ -1794,6 +2063,9 @@ export function AuditPage() {
                   <tr key={a.id}>
                     <td>{auditLabels[a.action] || a.action}</td>
                     <td>{a.user || 'حساب محذوف'}</td>
+                    <td className="tiny muted" dir="ltr">
+                      {a.entity || '—'}
+                    </td>
                     <td>{date(a.createdAt)}</td>
                   </tr>
                 ))}
@@ -1826,7 +2098,9 @@ export function AccountPage() {
         currentPassword: f.get('currentPassword'),
         password: f.get('password'),
       });
-      setMessage('تم تغيير كلمة المرور وإنهاء الجلسات الأخرى.');
+      setMessage(
+        isSupabaseEnabled ? 'تم تغيير كلمة المرور.' : 'تم تغيير كلمة المرور وإنهاء الجلسات الأخرى.',
+      );
       form.reset();
     } catch (err) {
       setError((err as Error).message);

@@ -69,7 +69,14 @@ jobs:
             throw new Error('Supabase database/catalog is not ready.');
           }
           const privateResponse = await fetch(url + '/rest/v1/dar_orders?select=id&limit=1', { headers: { apikey: key } });
-          if (privateResponse.ok) throw new Error('Order access must be private. Review SQL grants before publishing.');
+          if (![401, 403].includes(privateResponse.status)) throw new Error('Could not verify private order access (HTTP ' + privateResponse.status + '). Review SQL grants before publishing.');
+          const adminResponse = await fetch(url + '/rest/v1/rpc/dar_admin', {
+            method: 'POST', headers: { apikey: key, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'GET /admin/dashboard', payload: {} })
+          });
+          if (![401, 403].includes(adminResponse.status)) throw new Error('Anonymous administration must be denied (HTTP ' + adminResponse.status + ').');
+          const pending = data.products.filter(product => product.demo).length;
+          console.log('::notice::Store mode: ' + data.settings.mode + '; products awaiting approval: ' + pending + '.');
           console.log('Database catalog and anonymous order-access protection verified. Products: ' + data.products.length);
           console.log('::notice::Supabase ready: ' + data.products.length + ' products, protected order tables.');
           JS

@@ -11,10 +11,12 @@ export function launchChecks(db, settings) {
       ok: products.length > 0 && products.every((p) => !p.demo),
     },
     {
-      label: 'منطقة شحن فعلية واحدة على الأقل',
-      ok: settings.shippingZones.some(
-        (z) => z.enabled && z.id !== 'demo-zone' && !z.name.includes('تجريب'),
-      ),
+      label: 'منطقة توصيل فعلية أو فرع متاح للاستلام',
+      ok:
+        settings.shippingZones.some(
+          (z) => z.enabled && z.id !== 'demo-zone' && !z.name.includes('تجريب'),
+        ) ||
+        settings.branches.some((b) => b.enabled !== false && b.name.trim() && b.address.trim()),
     },
     {
       label: 'وسيلة تواصل وسياسات الشحن والاستبدال والخصوصية',

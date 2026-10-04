@@ -523,9 +523,8 @@ export function Home() {
       </div>
       {[
         'featured',
-        ...['brewing', 'story', 'experience', 'recipes', 'quiz', 'branches', 'guide'].filter(
-          (s) =>
-            settings.sections.includes(s) && !(s === 'guide' && settings.sections.includes('quiz')),
+        ...settings.sections.filter(
+          (s, index, all) => s !== 'featured' && all.indexOf(s) === index && Boolean(sections[s]),
         ),
       ].map((s) => (
         <div key={s}>{sections[s]}</div>
@@ -655,7 +654,9 @@ export function ProductPage() {
           <h1>{packageTitle(product)}</h1>
           <p className="description">{product.description}</p>
           <strong className="detail-price">{money(variant?.price || 0)}</strong>
-          {product.demo && <span className="muted tiny">سعر ووزن تجريبيان لحين الاعتماد</span>}
+          {product.demo && (
+            <span className="muted tiny">بيانات المنتج في انتظار اعتماد الإدارة</span>
+          )}
           {choiceNotice && <Alert kind="info">{choiceNotice}</Alert>}
           <fieldset className="package-choice">
             <legend>١ · اختار التحميص</legend>
@@ -971,7 +972,9 @@ export function Checkout() {
   const details = useCartDetails();
   const navigate = useNavigate();
   const [zoneId, setZone] = useState('');
-  const [fulfillment, setFulfillment] = useState<'delivery' | 'pickup'>('delivery');
+  const [fulfillment, setFulfillment] = useState<'delivery' | 'pickup'>(
+    settings.shippingZones.length ? 'delivery' : 'pickup',
+  );
   const [pickupBranchIndex, setPickupBranchIndex] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -1058,16 +1061,18 @@ export function Checkout() {
           <h2>طريقة الاستلام</h2>
           <fieldset className="fulfillment-options">
             <legend className="sr-only">طريقة الاستلام</legend>
-            <label>
-              <input
-                type="radio"
-                name="fulfillment"
-                value="delivery"
-                checked={fulfillment === 'delivery'}
-                onChange={() => setFulfillment('delivery')}
-              />
-              توصيل للعنوان
-            </label>
+            {!!settings.shippingZones.length && (
+              <label>
+                <input
+                  type="radio"
+                  name="fulfillment"
+                  value="delivery"
+                  checked={fulfillment === 'delivery'}
+                  onChange={() => setFulfillment('delivery')}
+                />
+                توصيل للعنوان
+              </label>
+            )}
             {!!settings.branches.length && (
               <label>
                 <input

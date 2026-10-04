@@ -232,14 +232,6 @@ export async function supabaseApi<T>(url: string, options: RequestInit = {}): Pr
     return (await uploadImage(options.body)) as T;
   }
   if (path.startsWith('/admin/')) {
-    if (
-      (path === '/admin/users' && method === 'POST') ||
-      (path.startsWith('/admin/users/') && method === 'DELETE')
-    )
-      throw new SupabaseApiError(
-        'إنشاء وحذف حسابات الدخول يتم من لوحة Supabase الآمنة. لا يمكن تنفيذه من واجهة المتجر.',
-        501,
-      );
     await currentProfile();
     return rpc<T>('dar_admin', {
       action: `${method} ${path}`,

@@ -1,28 +1,10 @@
--- Run once in a NEW Supabase project SQL Editor. No customer orders or credentials.
+-- Apply in Supabase SQL Editor on the existing project. Safe to run repeatedly.
+-- Replaces backend functions only. Does not approve prices, enable sales, delete orders or alter Auth accounts.
 BEGIN;
--- Shared Supabase backend. Prices are integer Egyptian-piastre amounts.
-create schema if not exists extensions;
-create extension if not exists pgcrypto with schema extensions;
+create or replace function public.dar_now_ms() returns bigint language sql volatile set search_path = '' as $$ select floor(extract(epoch from clock_timestamp()) * 1000)::bigint $$;
+create or replace function public.dar_is_admin() returns boolean language sql stable security definer set search_path = '' as $$ select exists(select 1 from public.dar_admin_profiles where user_id=auth.uid() and active) $$;
 
-create table public.dar_settings (id smallint primary key check (id = 1), value jsonb not null check (jsonb_typeof(value) = 'object'));
-create table public.dar_products (id uuid primary key default gen_random_uuid(), data jsonb not null check (jsonb_typeof(data) = 'object'));
-create unique index dar_products_slug on public.dar_products ((data->>'slug'));
-create table public.dar_orders (id bigint generated always as identity primary key, token text unique not null check (token ~ '^[a-f0-9]{64}$'), idempotency_key uuid unique not null, request_hash text not null, data jsonb not null);
-create index dar_orders_created on public.dar_orders (((data->>'createdAt')::bigint));
-create table public.dar_admin_profiles (user_id uuid primary key references auth.users(id) on delete cascade, name text not null check (length(name) between 2 and 80), role text not null check (role in ('owner','manager')), active boolean not null default true, created_at timestamptz not null default now());
-create table public.dar_audit (id bigint generated always as identity primary key, admin_id uuid, action text not null, entity text not null, details jsonb not null default '{}', created_at timestamptz not null default now());
-alter table public.dar_settings enable row level security;
-alter table public.dar_products enable row level security;
-alter table public.dar_orders enable row level security;
-alter table public.dar_admin_profiles enable row level security;
-alter table public.dar_audit enable row level security;
-revoke all on public.dar_settings, public.dar_products, public.dar_orders, public.dar_admin_profiles, public.dar_audit from anon, authenticated;
-revoke all on sequence public.dar_orders_id_seq, public.dar_audit_id_seq from anon, authenticated;
-
-create function public.dar_now_ms() returns bigint language sql volatile set search_path = '' as $$ select floor(extract(epoch from clock_timestamp()) * 1000)::bigint $$;
-create function public.dar_is_admin() returns boolean language sql stable security definer set search_path = '' as $$ select exists(select 1 from public.dar_admin_profiles where user_id=auth.uid() and active) $$;
-
-create function public.dar_validate_product(p jsonb) returns void language plpgsql set search_path = '' as $$
+create or replace function public.dar_validate_product(p jsonb) returns void language plpgsql set search_path = '' as $$
 declare v jsonb; seen text[] := '{}';
 begin
   if octet_length(p::text)>65536 or jsonb_typeof(p) is distinct from 'object' or coalesce(length(btrim(p->>'name')),0) not between 1 and 200 or coalesce(length(p->>'description'),0) not between 1 and 4000
@@ -43,7 +25,7 @@ begin
   end loop;
 end $$;
 
-create function public.dar_validate_settings(s jsonb) returns void language plpgsql set search_path = '' as $$
+create or replace function public.dar_validate_settings(s jsonb) returns void language plpgsql set search_path = '' as $$
 declare v jsonb; seen text[] := '{}';
 begin
   if jsonb_typeof(s) is distinct from 'object' or coalesce(s->>'mode','') not in ('preview','live') or coalesce(length(s->>'brand'),0) not between 1 and 200
@@ -65,7 +47,7 @@ begin
   end if;
 end $$;
 
-create function public.dar_launch_checks(s jsonb) returns jsonb language sql stable security definer set search_path = '' as $$
+create or replace function public.dar_launch_checks(s jsonb) returns jsonb language sql stable security definer set search_path = '' as $$
  select jsonb_build_array(
  jsonb_build_object('label','منتج نشط واحد على الأقل ببيانات معتمدة','ok',exists(select 1 from public.dar_products where (data->>'active')::boolean) and not exists(select 1 from public.dar_products where (data->>'active')::boolean and (data->>'demo')::boolean)),
  jsonb_build_object('label','منطقة توصيل معتمدة أو فرع استلام متاح','ok',exists(select 1 from jsonb_array_elements(coalesce(s->'shippingZones','[]')) z where (z->>'enabled')::boolean and z->>'id' <> 'demo-zone' and position('تجريب' in z->>'name')=0) or exists(select 1 from jsonb_array_elements(coalesce(s->'branches','[]')) b where coalesce((b->>'enabled')::boolean,true) and length(btrim(coalesce(b->>'name','')))>0 and length(btrim(coalesce(b->>'address','')))>0)),
@@ -73,8 +55,8 @@ create function public.dar_launch_checks(s jsonb) returns jsonb language sql sta
  jsonb_build_object('label','طريقة دفع مفعلة','ok',coalesce((s->>'codEnabled')::boolean,false)))
 $$;
 
-create function public.dar_public_order(o jsonb) returns jsonb language sql immutable set search_path = '' as $$ select (o - 'id' - 'note') || jsonb_build_object('customer',jsonb_build_object('name',o->'customer'->'name','city',o->'customer'->'city')) $$;
-create function public.dar_store() returns jsonb language plpgsql stable security definer set search_path = '' as $$
+create or replace function public.dar_public_order(o jsonb) returns jsonb language sql immutable set search_path = '' as $$ select (o - 'id' - 'note') || jsonb_build_object('customer',jsonb_build_object('name',o->'customer'->'name','city',o->'customer'->'city')) $$;
+create or replace function public.dar_store() returns jsonb language plpgsql stable security definer set search_path = '' as $$
 declare s jsonb; products jsonb;
 begin
  select value into s from public.dar_settings where id=1;
@@ -84,7 +66,7 @@ begin
  return jsonb_build_object('settings',s,'products',products);
 end $$;
 
-create function public.dar_place_order(input jsonb) returns jsonb language plpgsql security definer set search_path = '' as $$
+create or replace function public.dar_place_order(input jsonb) returns jsonb language plpgsql security definer set search_path = '' as $$
 declare s jsonb; customer jsonb; zone jsonb; branch jsonb := null; pickup boolean; l jsonb; c jsonb; p jsonb; v jsonb; variants jsonb; components jsonb; items jsonb := '[]'; seen uuid[]; pid uuid; vid uuid; grams integer; qty integer; amount integer; weight integer; unit_price bigint; subtotal bigint:=0; fee bigint; total bigint; at_ms bigint; order_id bigint; order_token text; request_key uuid; request_hash text; previous public.dar_orders%rowtype; order_data jsonb; vi integer;
 begin
  if jsonb_typeof(input) is distinct from 'object' or octet_length(input::text)>131072 then raise exception 'بيانات الطلب غير صالحة.'; end if;
@@ -173,7 +155,7 @@ begin
  return public.dar_public_order(order_data);
 end $$;
 
-create function public.dar_track_order(token text) returns jsonb language plpgsql stable security definer set search_path = '' as $$
+create or replace function public.dar_track_order(token text) returns jsonb language plpgsql stable security definer set search_path = '' as $$
 declare o jsonb;
 begin
  if token is null or token !~ '^[a-f0-9]{64}$' then raise exception 'الطلب غير موجود.'; end if;
@@ -182,7 +164,7 @@ begin
  return public.dar_public_order(o);
 end $$;
 
-create function public.dar_admin(action text,payload jsonb default '{}') returns jsonb language plpgsql security definer set search_path = '' as $$
+create or replace function public.dar_admin(action text,payload jsonb default '{}') returns jsonb language plpgsql security definer set search_path = '' as $$
 declare profile public.dar_admin_profiles%rowtype; owner boolean; verb text; path text; ident text; p jsonb; prior jsonb; s jsonb; o jsonb; patch jsonb; v jsonb; old_v jsonb; variants jsonb; retired jsonb; item jsonb; component jsonb; variant_index integer; variant_collection text; qty integer; next_status text; next_payment text; at_ms bigint; rows jsonb; total bigint; page integer; q text; filter_status text; uid uuid;
 begin
  if auth.uid() is null then raise exception 'سجل الدخول للمتابعة.' using errcode='28000'; end if;
@@ -296,32 +278,4 @@ begin
  raise exception 'عملية الإدارة غير مدعومة.';
 end $$;
 
-revoke all on function public.dar_now_ms(),public.dar_is_admin(),public.dar_validate_product(jsonb),public.dar_validate_settings(jsonb),public.dar_launch_checks(jsonb),public.dar_public_order(jsonb),public.dar_store(),public.dar_place_order(jsonb),public.dar_track_order(text),public.dar_admin(text,jsonb) from public,anon,authenticated;
-grant execute on function public.dar_store(),public.dar_place_order(jsonb),public.dar_track_order(text) to anon,authenticated;
-grant execute on function public.dar_admin(text,jsonb) to authenticated;
-grant execute on function public.dar_is_admin() to authenticated;
-
--- Public images, with uploads restricted to active administrators.
-do $$ begin
- if to_regclass('storage.buckets') is not null then
-   insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types) values('coffee-media','coffee-media',true,10485760,array['image/jpeg','image/png','image/webp']) on conflict(id) do update set public=true,file_size_limit=10485760,allowed_mime_types=excluded.allowed_mime_types;
-   execute 'create policy dar_media_read on storage.objects for select to anon,authenticated using (bucket_id = ''coffee-media'')';
-   execute 'create policy dar_media_insert on storage.objects for insert to authenticated with check (bucket_id = ''coffee-media'' and name ~* ''\.(png|jpe?g|webp)$'' and public.dar_is_admin())';
-   execute 'create policy dar_media_update on storage.objects for update to authenticated using (bucket_id = ''coffee-media'' and public.dar_is_admin()) with check (bucket_id = ''coffee-media'' and name ~* ''\.(png|jpe?g|webp)$'' and public.dar_is_admin())';
-   execute 'create policy dar_media_delete on storage.objects for delete to authenticated using (bucket_id = ''coffee-media'' and public.dar_is_admin())';
- end if;
-end $$;
-
-SET LOCAL standard_conforming_strings = on;
-INSERT INTO public.dar_settings (id, value) VALUES (1, '{"brand":"دار البن البرازيلي","mode":"preview","heroTitle":"الحكاية\nفي الفنجان.","heroSubtitle":"فنجان في هدوء الصبح، أو قهوة وسط اللمّة. اختار قهوتك للبيت بالوزن والطحنة اللي يناسبوك، وخلّي الحكاية تكمل على مزاجك.","heroImage":"/images/coffee-duo-hero.webp","heroVideo":"/media/coffee-duo-loop.mp4","storyTitle":"سنين عدّت.\nوالحكاية لسه مكمّلة.","storyText":"من تفاصيل الأيام للّمة والقهوة الحلوة، دار البن البرازيلي جزء من حكايات بتكمل مع أجيال بتتغيّر. وحكاية الفنجان نفسه تبدأ من الحبوب، وتكمل بالتحميص والطحن، لحد اللحظة اللي بتحبها.","contactPhone":"","contactEmail":"","address":"","shippingPolicy":"","returnsPolicy":"","privacyPolicy":"","codEnabled":true,"sections":["featured","brewing","quiz","recipes","experience","story","branches","guide"],"branches":[{"name":"جسر السويس — ألف مسكن","address":"شارع جسر السويس، ألف مسكن","main":true},{"name":"مدينة نصر","address":"شارع الطيران، بجوار كوك دور","main":false},{"name":"المقطم","address":"شارع ٩، داخل بنزينة شيل أوت، بجوار جمعية رسالة","main":false},{"name":"العبور","address":"المنطقة التاسعة، داخل مول أفينيو","main":false}],"shippingZones":[{"id":"demo-zone","name":"منطقة تجريبية","fee":0,"eta":"للتجربة فقط","enabled":true}]}'::jsonb) ON CONFLICT (id) DO NOTHING;
-INSERT INTO public.dar_products (id, data) VALUES ('6b36c973-625f-4d0b-a03a-5b35c12b8ce3'::uuid, '{"id":"6b36c973-625f-4d0b-a03a-5b35c12b8ce3","slug":"blend-origin-colombia","name":"بن كولومبي","description":"حلاوة ولمسة فاكهية، لاختيار متوازن. مثال عام قابل للاختلاف حسب الحبوب والتحميص والمعالجة. المنشأ والنوع والأسعار والمخزون بيانات معاينة، وليست قائمة معتمدة لدار البن.","roast":"وسط","brew":["تركي","إسبريسو","فلتر"],"kind":"حبوب للتوليف","grinds":["تركي ناعم","إسبريسو ناعم","فلتر متوسط","حبوب كاملة"],"image":"/images/beans-colombia.webp","active":true,"featured":false,"demo":true,"stockMode":"grams","stockGrams":5000,"updatedAt":1791109327170,"variants":[{"id":"c17c9c43-3a1b-4e02-b2de-aa2c6cc15852","weight":50,"price":5000,"stock":0}]}'::jsonb) ON CONFLICT (id) DO NOTHING;
-INSERT INTO public.dar_products (id, data) VALUES ('1319bdc2-e615-4584-9757-860fb9d4759e'::uuid, '{"id":"1319bdc2-e615-4584-9757-860fb9d4759e","slug":"blend-origin-ethiopia","name":"بن إثيوبي","description":"لمسات فاكهية وزهرية لعشاق النكهات الواضحة. مثال عام قابل للاختلاف حسب الحبوب والتحميص والمعالجة. المنشأ والنوع والأسعار والمخزون بيانات معاينة، وليست قائمة معتمدة لدار البن.","roast":"فاتح","brew":["تركي","إسبريسو","فلتر"],"kind":"حبوب للتوليف","grinds":["تركي ناعم","إسبريسو ناعم","فلتر متوسط","حبوب كاملة"],"image":"/images/beans-ethiopia.webp","active":true,"featured":false,"demo":true,"stockMode":"grams","stockGrams":5000,"updatedAt":1791109327170,"variants":[{"id":"a77a6aeb-9a1f-4530-a651-1759d26f217e","weight":50,"price":6000,"stock":0}]}'::jsonb) ON CONFLICT (id) DO NOTHING;
-INSERT INTO public.dar_products (id, data) VALUES ('556baffc-af9e-453a-94d5-d1047a776a30'::uuid, '{"id":"556baffc-af9e-453a-94d5-d1047a776a30","slug":"blend-origin-guatemala","name":"بن جواتيمالي","description":"كاكاو وحلاوة قريبة من الكراميل. مثال عام قابل للاختلاف حسب الحبوب والتحميص والمعالجة. المنشأ والنوع والأسعار والمخزون بيانات معاينة، وليست قائمة معتمدة لدار البن.","roast":"وسط","brew":["تركي","إسبريسو","فلتر"],"kind":"حبوب للتوليف","grinds":["تركي ناعم","إسبريسو ناعم","فلتر متوسط","حبوب كاملة"],"image":"/images/beans-guatemala.webp","active":true,"featured":false,"demo":true,"stockMode":"grams","stockGrams":5000,"updatedAt":1791109327170,"variants":[{"id":"0ae9f3d8-05c2-45ae-8f28-951e75fde9d0","weight":50,"price":5500,"stock":0}]}'::jsonb) ON CONFLICT (id) DO NOTHING;
-INSERT INTO public.dar_products (id, data) VALUES ('3e73fec1-92a7-4c9e-b434-c391b4cc11c8'::uuid, '{"id":"3e73fec1-92a7-4c9e-b434-c391b4cc11c8","slug":"blend-origin-kenya","name":"بن كيني","description":"طابع فاكهي وحموضة أوضح في الفنجان. مثال عام قابل للاختلاف حسب الحبوب والتحميص والمعالجة. المنشأ والنوع والأسعار والمخزون بيانات معاينة، وليست قائمة معتمدة لدار البن.","roast":"فاتح","brew":["تركي","إسبريسو","فلتر"],"kind":"حبوب للتوليف","grinds":["تركي ناعم","إسبريسو ناعم","فلتر متوسط","حبوب كاملة"],"image":"/images/beans-kenya.webp","active":true,"featured":false,"demo":true,"stockMode":"grams","stockGrams":5000,"updatedAt":1791109327170,"variants":[{"id":"3b24b7dc-89fc-482a-a80e-9eb4113a849f","weight":50,"price":6500,"stock":0}]}'::jsonb) ON CONFLICT (id) DO NOTHING;
-INSERT INTO public.dar_products (id, data) VALUES ('3bee0feb-b6bb-46a2-8c8a-09afc9529b99'::uuid, '{"id":"3bee0feb-b6bb-46a2-8c8a-09afc9529b99","slug":"blend-origin-indonesia","name":"بن إندونيسي","description":"لمسات أرضية وتوابل وقوام أوضح. مثال عام قابل للاختلاف حسب الحبوب والتحميص والمعالجة. المنشأ والنوع والأسعار والمخزون بيانات معاينة، وليست قائمة معتمدة لدار البن.","roast":"غامق","brew":["تركي","إسبريسو","فلتر"],"kind":"حبوب للتوليف","grinds":["تركي ناعم","إسبريسو ناعم","فلتر متوسط","حبوب كاملة"],"image":"/images/beans-indonesia.webp","active":true,"featured":false,"demo":true,"stockMode":"grams","stockGrams":5000,"updatedAt":1791109327170,"variants":[{"id":"71d71024-f5f5-4f6f-9290-644acabdf5a5","weight":50,"price":5000,"stock":0}]}'::jsonb) ON CONFLICT (id) DO NOTHING;
-INSERT INTO public.dar_products (id, data) VALUES ('8a4dc1d9-81fb-40e9-8989-b06bfeb8b619'::uuid, '{"id":"8a4dc1d9-81fb-40e9-8989-b06bfeb8b619","slug":"blend-origin-yemen","name":"بن يمني","description":"حلاوة ولمسات فاكهة مجففة وكاكاو. مثال عام قابل للاختلاف حسب الحبوب والتحميص والمعالجة. المنشأ والنوع والأسعار والمخزون بيانات معاينة، وليست قائمة معتمدة لدار البن.","roast":"وسط","brew":["تركي","إسبريسو","فلتر"],"kind":"حبوب للتوليف","grinds":["تركي ناعم","إسبريسو ناعم","فلتر متوسط","حبوب كاملة"],"image":"/images/beans-yemen.webp","active":true,"featured":false,"demo":true,"stockMode":"grams","stockGrams":5000,"updatedAt":1791109327170,"variants":[{"id":"bbb6f8e3-ec2f-4bfd-bb5a-06c40829834a","weight":50,"price":7500,"stock":0}]}'::jsonb) ON CONFLICT (id) DO NOTHING;
-INSERT INTO public.dar_products (id, data) VALUES ('5e5ece8a-b68f-4985-a1c0-0f789882ff5c'::uuid, '{"id":"5e5ece8a-b68f-4985-a1c0-0f789882ff5c","slug":"blend-origin-india","name":"بن هندي روبوستا","description":"مذاق أقوى ومرارة أوضح، ويدخل بنسبة مناسبة في التوليفة. مثال عام قابل للاختلاف حسب الحبوب والتحميص والمعالجة. المنشأ والنوع والأسعار والمخزون بيانات معاينة، وليست قائمة معتمدة لدار البن.","roast":"غامق","brew":["تركي","إسبريسو","فلتر"],"kind":"حبوب للتوليف","grinds":["تركي ناعم","إسبريسو ناعم","فلتر متوسط","حبوب كاملة"],"image":"/images/beans-india.webp","active":true,"featured":false,"demo":true,"stockMode":"grams","stockGrams":5000,"updatedAt":1791109327170,"variants":[{"id":"0adb68d4-1582-45fd-b7e0-6d874826a8a5","weight":50,"price":3500,"stock":0}]}'::jsonb) ON CONFLICT (id) DO NOTHING;
-INSERT INTO public.dar_products (id, data) VALUES ('0c19661c-f7a7-49ea-bba0-7ffddbc7bdaa'::uuid, '{"id":"0c19661c-f7a7-49ea-bba0-7ffddbc7bdaa","slug":"blend-origin-brazil","name":"بن برازيلي","description":"شوكولاتة ومكسرات، ومذاق متوازن. مثال عام قابل للاختلاف حسب الحبوب والتحميص والمعالجة. المنشأ والنوع والأسعار والمخزون بيانات معاينة، وليست قائمة معتمدة لدار البن.","roast":"وسط","brew":["تركي","إسبريسو","فلتر"],"kind":"حبوب للتوليف","grinds":["تركي ناعم","إسبريسو ناعم","فلتر متوسط","حبوب كاملة"],"image":"/images/beans-brazil.webp","active":true,"featured":false,"demo":true,"stockMode":"grams","stockGrams":5000,"updatedAt":1791109327169,"variants":[{"id":"b1303dee-32f8-4d06-b15f-c2a44479284c","weight":50,"price":4000,"stock":0}]}'::jsonb) ON CONFLICT (id) DO NOTHING;
-INSERT INTO public.dar_products (id, data) VALUES ('8fa1e97d-bc56-41eb-a73b-9d4a96df7138'::uuid, '{"id":"8fa1e97d-bc56-41eb-a73b-9d4a96df7138","slug":"dar-blend-sada","name":"بن دار البن البرازيلي — سادة","description":"عبوة سادة من دار البن البرازيلي، ظاهرة في صور العلامة. تفاصيل الأوزان والطحن والأسعار تُعرض بعد اعتمادها. الأوزان والأسعار الحالية للمعاينة، وتحتاج اعتماد الإدارة قبل البيع.","roast":"غير محدد","brew":["تركي"],"kind":"سادة","grinds":["تركي ناعم","حبوب كاملة"],"image":"/images/coffee-sada-studio.webp","active":true,"featured":true,"demo":true,"stockMode":"units","stockGrams":0,"updatedAt":1791058384955,"variants":[{"id":"e742f01a-f9e3-45b9-b871-f453dbbb7082","weight":250,"price":18000,"stock":20},{"id":"cbd394ec-f4ae-445d-9657-9062250d0e8b","weight":500,"price":34000,"stock":10}]}'::jsonb) ON CONFLICT (id) DO NOTHING;
-INSERT INTO public.dar_products (id, data) VALUES ('c083aecf-4ba1-466a-8d12-50bdd5fdfe89'::uuid, '{"id":"c083aecf-4ba1-466a-8d12-50bdd5fdfe89","slug":"dar-blend-mahawag","name":"توليفة دار البن البرازيلي","description":"توليفة دار البن البرازيلي المحوج، لتحضير القهوة التركي في البيت. اختار الوزن المناسب لاستخدامك، ثم حدّد الطحنة قبل إضافتها للسلة. الأوزان والأسعار الحالية للمعاينة، وتحتاج اعتماد الإدارة قبل البيع.","roast":"وسط","brew":["تركي"],"kind":"محوج","grinds":["تركي ناعم","حبوب كاملة"],"image":"/images/coffee-tin-studio.webp","active":true,"featured":true,"demo":true,"stockMode":"units","stockGrams":0,"updatedAt":1791056575879,"variants":[{"id":"4c94dc5f-6ade-436f-a166-bfd8d4862c72","weight":250,"price":18000,"stock":20},{"id":"8b7dee78-7b63-4ac0-ab94-eb62c01e6fc0","weight":500,"price":34000,"stock":10}]}'::jsonb) ON CONFLICT (id) DO NOTHING;
 COMMIT;

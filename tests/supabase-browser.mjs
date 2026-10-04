@@ -9,7 +9,7 @@ import { resolve, join } from 'node:path';
 import { chromium, expect } from '@playwright/test';
 import { openDatabase, allProducts, getSettings, orderView } from '../server/db.mjs';
 import { createAdmin } from '../server/auth.mjs';
-import { placeOrder, saveProduct } from '../server/store.mjs';
+import { placeOrder, saveProduct, updateOrder } from '../server/store.mjs';
 
 const output = '.local/supabase-pages-test';
 execFileSync(process.execPath, ['scripts/build-supabase-pages.mjs'], {
@@ -99,6 +99,7 @@ try {
     user,
   };
   const calls = [];
+  let inventoryBeforeOrder;
   browser = await chromium.launch({
     executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium',
     headless: true,
@@ -149,7 +150,12 @@ try {
     try {
       if (name === 'dar_store')
         return respond({ settings: getSettings(db), products: allProducts(db, true) });
-      if (name === 'dar_place_order') return respond(placeOrder(db, body.input).order);
+      if (name === 'dar_place_order') {
+        inventoryBeforeOrder = new Map(
+          allProducts(db).map((product) => [product.id, product.stockGrams]),
+        );
+        return respond(placeOrder(db, body.input).order);
+      }
       if (name === 'dar_track_order')
         return respond(orderView(db.prepare('SELECT * FROM orders WHERE token=?').get(body.token)));
       if (name === 'dar_admin') {
@@ -160,6 +166,20 @@ try {
         );
         const { action, payload } = body;
         if (action === 'me') return respond(profile);
+        if (action === 'GET /admin/settings') return respond(getSettings(db));
+        if (action === 'PUT /admin/settings') {
+          const { _query, ...settings } = payload;
+          db.prepare('UPDATE settings SET value=? WHERE id=1').run(JSON.stringify(settings));
+          return respond(settings);
+        }
+        if (action === 'POST /admin/products') {
+          const { _query, ...product } = payload;
+          return respond(saveProduct(db, randomUUID(), product, profile));
+        }
+        if (action.startsWith('PATCH /admin/orders/')) {
+          const { _query, ...patch } = payload;
+          return respond(updateOrder(db, Number(action.split('/').pop()), patch, profile));
+        }
         if (action === 'GET /admin/products') return respond(allProducts(db));
         if (action.startsWith('PUT /admin/products/')) {
           const { _query, ...product } = payload;
@@ -190,7 +210,6 @@ try {
       }
       return respond({ message: 'Unexpected fixture route' }, 404);
     } catch (error) {
-      errors.push(error.message);
       return respond({ message: error.message, code: 'P0001' }, 400);
     }
   });
@@ -220,7 +239,28 @@ try {
     (call) => call.name === 'dar_admin' && call.body.action.startsWith('PUT /admin/products/'),
   );
   assert.equal(save.body.payload.variants[0].price, 20100);
+  // Creating a hidden product must not accidentally publish it to customers.
+  await page.getByRole('link', { name: 'إضافة منتج', exact: true }).click();
+  await page.getByLabel('اسم المنتج', { exact: true }).fill('منتج اختبار مخفي');
+  await page.getByLabel('رابط المنتج').fill('fixture-hidden-package');
+  await page.getByLabel('الوصف', { exact: true }).fill('وصف منتج في قاعدة بيانات الاختبار فقط.');
+  await page.getByLabel('النوع').selectOption('سادة');
+  await page.getByLabel('السعر (ج.م)', { exact: true }).fill('180');
+  await page.getByRole('button', { name: 'حفظ المنتج', exact: true }).click();
+  await expect(page).toHaveURL(/#\/admin\/products$/);
+  const created = allProducts(db).find((product) => product.slug === 'fixture-hidden-package');
+  assert(created && !created.active, 'A new product stays hidden until explicitly activated');
+  await page.reload();
+  await expect(page.getByRole('link', { name: 'تعديل منتج اختبار مخفي' })).toBeVisible();
+  // Content changes persist through admin, refresh and the public storefront.
+  await page.goto(site + '#/admin/content');
+  await page.getByLabel('العنوان الرئيسي').fill('الحكاية في الفنجان.');
+  await page.getByRole('button', { name: 'حفظ التغييرات', exact: true }).click();
+  await expect(page.locator('.alert.success')).toContainText('تم حفظ');
+  await page.reload();
+  await expect(page.getByLabel('العنوان الرئيسي')).toHaveValue('الحكاية في الفنجان.');
   await page.goto(site);
+  await expect(page.locator('.hero h1')).toHaveText('الحكاية في الفنجان.');
   await expect(page.locator('.package-card')).toHaveCount(8);
   await expect(page.locator('.home-featured')).toContainText('حكايتك تبدأ باختيارك');
   const layout = await page.evaluate(() => {
@@ -295,7 +335,7 @@ try {
   await page.getByLabel('الاسم بالكامل').fill('عميل التكامل');
   await page.getByLabel('رقم الموبايل').fill('01012345678');
   await page.getByLabel('فرع الاستلام').selectOption('1');
-  await page.getByRole('button', { name: 'تأكيد الطلب التجريبي' }).click();
+  await page.getByRole('button', { name: /تأكيد الطلب/ }).click();
   await expect(page).toHaveURL(/#\/order\/[a-f0-9]{64}$/);
   await expect(page.locator('.pickup-confirmation')).toContainText('مدينة نصر');
   await expect(page.locator('.checkout-line').first()).toContainText('إثيوبي 50 جم');
@@ -313,9 +353,90 @@ try {
   await page.getByRole('link', { name: reference, exact: true }).click();
   await expect(page.locator('.order-item')).toContainText('إثيوبي: 50 جم');
   await expect(page.getByRole('heading', { name: /الاستلام من فرع.*مدينة نصر/ })).toBeVisible();
+  const orderToken = submitted
+    ? db.prepare('SELECT token FROM orders ORDER BY id DESC LIMIT 1').get().token
+    : '';
+  // Admin state and private notes persist, while the customer sees only public tracking.
+  await page.getByLabel('حالة الطلب').selectOption('confirmed');
+  await page.getByLabel('ملاحظات داخلية').fill('ملاحظة سرية للاختبار');
+  await page
+    .getByLabel('معلومات متابعة الاستلام من الفرع', { exact: true })
+    .fill('جاهز للاستلام بعد التأكيد');
+  await page.getByRole('button', { name: 'حفظ التحديثات', exact: true }).click();
+  await expect(page.locator('.alert.success')).toContainText('تم تحديث الطلب');
+  await page.reload();
+  await expect(page.getByLabel('حالة الطلب')).toHaveValue('confirmed');
+  await expect(page.getByLabel('ملاحظات داخلية')).toHaveValue('ملاحظة سرية للاختبار');
+  const adminOrderUrl = page.url();
+  await page.goto(site + '#/order/' + orderToken);
+  await expect(page.getByText('جاهز للاستلام بعد التأكيد')).toBeVisible();
+  await expect(page.getByText('ملاحظة سرية للاختبار', { exact: true })).toHaveCount(0);
+  await page.goto(adminOrderUrl);
+  await page.getByLabel('حالة الدفع').selectOption('paid');
+  await page.getByRole('button', { name: 'حفظ التحديثات', exact: true }).click();
+  await expect(page.locator('.alert.success')).toContainText('تم تحديث الطلب');
+  await expect(page.getByLabel('حالة الدفع')).toHaveValue('paid');
+  await page.getByLabel('حالة الطلب').selectOption('cancelled');
+  await page.getByRole('button', { name: 'حفظ التحديثات', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('رد المبلغ');
+  assert.equal(
+    db.prepare('SELECT status FROM orders ORDER BY id DESC LIMIT 1').get().status,
+    'confirmed',
+  );
+  await page.getByLabel('حالة الدفع').selectOption('refunded');
+  await page.getByRole('button', { name: 'حفظ التحديثات', exact: true }).click();
+  await expect(page.locator('.alert.success')).toContainText('تم تحديث الطلب');
+  await page.reload();
+  await expect(page.getByLabel('حالة الطلب')).toHaveValue('cancelled');
+  await expect(page.getByLabel('حالة الدفع')).toHaveValue('refunded');
+  await expect(page.getByLabel('حالة الطلب').locator('option')).toHaveCount(1);
+  for (const component of submitted.items[0].components) {
+    const restored = allProducts(db).find((product) => product.id === component.productId);
+    assert.equal(
+      restored.stockGrams,
+      inventoryBeforeOrder.get(component.productId),
+      'Cancellation restores each ingredient stock exactly once',
+    );
+  }
+  await page.goto(site + '#/admin/content');
+  const raiseStory = page.getByRole('button', { name: 'رفع حكاية دار البن', exact: true });
+  while (await raiseStory.isEnabled()) await raiseStory.click();
+  await page.getByRole('button', { name: 'إخفاء اختبار اختيار الفنجان', exact: true }).click();
+  await page.getByRole('button', { name: 'حفظ التغييرات', exact: true }).click();
+  await expect(page.locator('.alert.success')).toContainText('تم حفظ');
+  await page.reload();
+  await expect(
+    page.getByRole('button', { name: 'إظهار اختبار اختيار الفنجان', exact: true }),
+  ).toBeVisible();
+  await expect(raiseStory).toBeDisabled();
+  await page.goto(site);
+  await expect(page.locator('.home-quiz-teaser')).toHaveCount(0);
+  assert(
+    await page.evaluate(
+      () =>
+        document.querySelector('.home-story').getBoundingClientRect().top >
+        document.querySelector('.home-featured').getBoundingClientRect().top,
+    ),
+    'Store remains first when later sections are reordered',
+  );
+  assert(
+    await page.evaluate(
+      () =>
+        document.querySelector('.home-story').getBoundingClientRect().top <
+        document.querySelector('.drinks-menu').getBoundingClientRect().top,
+    ),
+    'Admin section order applies publicly',
+  );
+  await page.goto(adminOrderUrl);
+  await page.getByRole('button', { name: 'تسجيل الخروج', exact: true }).click();
+  await expect(page).toHaveURL(/#\/admin\/login$/);
+  const adminCallsAfterLogout = calls.filter((call) => call.name === 'dar_admin').length;
+  await page.goto(adminOrderUrl);
+  await expect(page).toHaveURL(/#\/admin\/login$/);
+  assert.equal(calls.filter((call) => call.name === 'dar_admin').length, adminCallsAfterLogout);
   assert.deepEqual(errors, []);
   console.log(
-    'Supabase Pages offline browser integration passed: auth, session persistence, authenticated price edit, blend pickup checkout and admin order.',
+    'Supabase Pages offline browser integration passed: auth, session persistence, product creation/visibility, price/content persistence, blend pickup checkout, private-note isolation, payment/cancellation states with inventory restoration, section hiding/reordering and logout protection.',
   );
 } finally {
   if (browser) await browser.close();

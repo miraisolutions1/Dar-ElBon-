@@ -232,7 +232,7 @@ export function createApp({
   app.put('/api/admin/settings', owner, (req, res) => {
     const settings = parse(settingsSchema, req.body);
     if (settings.branches === undefined) settings.branches = getSettings(db).branches;
-    if (settings.mode === 'live') {
+    if (settings.mode === 'live' && settings.codEnabled) {
       const missing = launchChecks(db, settings).filter((c) => !c.ok);
       if (missing.length)
         throw new HttpError(400, 'قبل تفعيل البيع: ' + missing.map((c) => c.label).join('، '));

@@ -72,11 +72,10 @@ export function DrinksMenu({ compact = false }: { compact?: boolean }) {
       <header className="drinks-menu-heading">
         <span className="eyebrow">الحكاية في الفنجان</span>
         {compact ? <h2>لحكايتك في الفرع، فنجان تاني.</h2> : <h1>مزاجك النهارده إيه؟</h1>}
-        <p>سخن ولا ساقع؟ شوف التصوّر المقترح للمشروبات، واختار اللي على مزاجك.</p>
+        <p>سخن ولا ساقع؟ اكتشف عالم المشروبات، وشوف اللي على مزاجك.</p>
       </header>
       <p className="drinks-menu-demo" role="note">
-        دي قائمة تجريبية للتصميم بصور توضيحية. أسماء المشروبات وتوفرها في الفروع محتاجة اعتماد،
-        والأسعار والطلب مش متاحين هنا.
+        للاستفسار عن قائمة المشروبات المتوفرة وأسعارها الحالية، تواصل مع الفرع.
       </p>
       <div className="drinks-menu-filters" role="group" aria-label="تصفية المشروبات">
         {filters.map((filter) => (

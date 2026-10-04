@@ -23,10 +23,10 @@ create function public.dar_is_admin() returns boolean language sql stable securi
 create function public.dar_validate_product(p jsonb) returns void language plpgsql set search_path = '' as $$
 declare v jsonb; seen text[] := '{}';
 begin
-  if jsonb_typeof(p) <> 'object' or coalesce(length(btrim(p->>'name')),0) not between 1 and 200 or coalesce(length(p->>'description'),0) not between 1 and 4000
+  if octet_length(p::text)>65536 or jsonb_typeof(p) is distinct from 'object' or coalesce(length(btrim(p->>'name')),0) not between 1 and 200 or coalesce(length(p->>'description'),0) not between 1 and 4000
     or coalesce(p->>'slug','') !~ '^[a-z0-9]+(-[a-z0-9]+)*$' or length(p->>'slug') > 100
     or coalesce(p->>'roast','') not in ('فاتح','وسط','غامق','غير محدد') or coalesce(p->>'stockMode','') not in ('units','grams')
-    or coalesce(p->>'kind','') = '' or coalesce(p->>'image','') !~ '^(/(images|uploads)/[a-zA-Z0-9._-]+|https://[^[:space:]]+)$'
+    or coalesce(length(btrim(p->>'kind')),0) not between 1 and 80 or coalesce(p->>'image','') !~ '^(/(images|uploads)/[a-zA-Z0-9._-]+|https://[^[:space:]]+)$'
     or jsonb_typeof(p->'active') is distinct from 'boolean' or jsonb_typeof(p->'featured') is distinct from 'boolean' or jsonb_typeof(p->'demo') is distinct from 'boolean'
     or coalesce(p->>'stockGrams','') !~ '^[0-9]+$' or (p->>'stockGrams')::numeric > 100000000
     or jsonb_typeof(p->'grinds') is distinct from 'array' or jsonb_array_length(p->'grinds') not between 1 and 8
@@ -44,7 +44,7 @@ end $$;
 create function public.dar_validate_settings(s jsonb) returns void language plpgsql set search_path = '' as $$
 declare v jsonb; seen text[] := '{}';
 begin
-  if jsonb_typeof(s) <> 'object' or coalesce(s->>'mode','') not in ('preview','live') or coalesce(length(s->>'brand'),0) not between 1 and 200
+  if jsonb_typeof(s) is distinct from 'object' or coalesce(s->>'mode','') not in ('preview','live') or coalesce(length(s->>'brand'),0) not between 1 and 200
     or jsonb_typeof(s->'codEnabled') is distinct from 'boolean' or jsonb_typeof(s->'shippingZones') is distinct from 'array' or jsonb_array_length(s->'shippingZones') > 50
     or jsonb_typeof(s->'sections') is distinct from 'array' or jsonb_array_length(s->'sections') > 8 then raise exception 'راجع إعدادات المتجر.'; end if;
   if octet_length(s::text)>65536 or coalesce(length(s->>'heroTitle'),0) not between 1 and 200 or coalesce(length(s->>'heroSubtitle'),0) not between 1 and 200 or coalesce(length(s->>'storyTitle'),0) not between 1 and 200 or coalesce(length(s->>'storyText'),0)>3000 or coalesce(s->>'heroImage','') !~ '^(/(images|uploads)/[a-zA-Z0-9._-]+|https://[^[:space:]]+)$' or coalesce(length(s->>'shippingPolicy'),0)>8000 or coalesce(length(s->>'returnsPolicy'),0)>8000 or coalesce(length(s->>'privacyPolicy'),0)>8000 then raise exception 'راجع نصوص وصورة وسياسات المتجر.'; end if;
@@ -66,8 +66,8 @@ end $$;
 create function public.dar_launch_checks(s jsonb) returns jsonb language sql stable security definer set search_path = '' as $$
  select jsonb_build_array(
  jsonb_build_object('label','منتج نشط واحد على الأقل ببيانات معتمدة','ok',exists(select 1 from public.dar_products where (data->>'active')::boolean) and not exists(select 1 from public.dar_products where (data->>'active')::boolean and (data->>'demo')::boolean)),
- jsonb_build_object('label','منطقة شحن فعلية واحدة على الأقل','ok',exists(select 1 from jsonb_array_elements(coalesce(s->'shippingZones','[]')) z where (z->>'enabled')::boolean and z->>'id' <> 'demo-zone' and position('تجريب' in z->>'name')=0)),
- jsonb_build_object('label','وسيلة تواصل وسياسات الشحن والاستبدال والخصوصية','ok',coalesce(s->>'contactPhone','') <> '' and coalesce(s->>'shippingPolicy','') <> '' and coalesce(s->>'returnsPolicy','') <> '' and coalesce(s->>'privacyPolicy','') <> ''),
+ jsonb_build_object('label','منطقة توصيل معتمدة أو فرع استلام متاح','ok',exists(select 1 from jsonb_array_elements(coalesce(s->'shippingZones','[]')) z where (z->>'enabled')::boolean and z->>'id' <> 'demo-zone' and position('تجريب' in z->>'name')=0) or exists(select 1 from jsonb_array_elements(coalesce(s->'branches','[]')) b where coalesce((b->>'enabled')::boolean,true) and length(btrim(coalesce(b->>'name','')))>0 and length(btrim(coalesce(b->>'address','')))>0)),
+ jsonb_build_object('label','وسيلة تواصل وسياسات الشحن والاستبدال والخصوصية','ok',length(btrim(coalesce(s->>'contactPhone','')))>0 and length(btrim(coalesce(s->>'shippingPolicy','')))>0 and length(btrim(coalesce(s->>'returnsPolicy','')))>0 and length(btrim(coalesce(s->>'privacyPolicy','')))>0),
  jsonb_build_object('label','طريقة دفع مفعلة','ok',coalesce((s->>'codEnabled')::boolean,false)))
 $$;
 
@@ -85,7 +85,7 @@ end $$;
 create function public.dar_place_order(input jsonb) returns jsonb language plpgsql security definer set search_path = '' as $$
 declare s jsonb; customer jsonb; zone jsonb; branch jsonb := null; pickup boolean; l jsonb; c jsonb; p jsonb; v jsonb; variants jsonb; components jsonb; items jsonb := '[]'; seen uuid[]; pid uuid; vid uuid; grams integer; qty integer; amount integer; weight integer; unit_price bigint; subtotal bigint:=0; fee bigint; total bigint; at_ms bigint; order_id bigint; order_token text; request_key uuid; request_hash text; previous public.dar_orders%rowtype; order_data jsonb; vi integer;
 begin
- if jsonb_typeof(input) <> 'object' or octet_length(input::text)>131072 then raise exception 'بيانات الطلب غير صالحة.'; end if;
+ if jsonb_typeof(input) is distinct from 'object' or octet_length(input::text)>131072 then raise exception 'بيانات الطلب غير صالحة.'; end if;
  request_key := (input->>'idempotencyKey')::uuid;
  if request_key is null then raise exception 'مفتاح الطلب مطلوب.'; end if;
  request_hash := encode(extensions.digest(input::text,'sha256'),'hex');
@@ -184,12 +184,14 @@ create function public.dar_admin(action text,payload jsonb default '{}') returns
 declare profile public.dar_admin_profiles%rowtype; owner boolean; verb text; path text; ident text; p jsonb; prior jsonb; s jsonb; o jsonb; patch jsonb; v jsonb; old_v jsonb; variants jsonb; retired jsonb; item jsonb; component jsonb; variant_index integer; variant_collection text; qty integer; next_status text; next_payment text; at_ms bigint; rows jsonb; total bigint; page integer; q text; filter_status text; uid uuid;
 begin
  if auth.uid() is null then raise exception 'سجل الدخول للمتابعة.' using errcode='28000'; end if;
+ -- Serialize every write with checkout before reading settings, permissions or stock.
+ if action <> 'me' and action !~ '^GET ' then perform 1 from public.dar_settings where id=1 for update; end if;
  select * into profile from public.dar_admin_profiles where user_id=auth.uid() and active;
  if not found then raise exception 'سجل الدخول بحساب إدارة مصرح له.' using errcode='42501'; end if;
  owner:=profile.role='owner';
  if action in ('me','GET /auth/me') then return jsonb_build_object('id',profile.user_id,'username',(select email from auth.users where id=profile.user_id),'name',profile.name,'role',profile.role); end if;
  verb:=split_part(action,' ',1); path:=split_part(action,' ',2);
- if verb not in ('GET','POST','PUT','PATCH','DELETE') or jsonb_typeof(payload)<>'object' then raise exception 'عملية إدارة غير صالحة.'; end if;
+ if verb not in ('GET','POST','PUT','PATCH','DELETE') or jsonb_typeof(payload) is distinct from 'object' then raise exception 'عملية إدارة غير صالحة.'; end if;
  if path in ('/admin/settings','/admin/users','/admin/audit') or path ~ '^/admin/users/' then if not owner then raise exception 'هذه العملية لمالك المتجر فقط.' using errcode='42501'; end if; end if;
  select value into s from public.dar_settings where id=1;
  if action='GET /admin/products' then return coalesce((select jsonb_agg(data-'retiredVariants' order by data->>'name') from public.dar_products),'[]'); end if;
@@ -199,6 +201,7 @@ begin
    select data into prior from public.dar_products where id=ident::uuid for update;
    if verb='PUT' and prior is null then raise exception 'المنتج غير موجود.'; end if;
    p:=payload-'_query'; perform public.dar_validate_product(p);
+   if prior is not null and prior->>'stockMode' is distinct from p->>'stockMode' and exists(select 1 from public.dar_orders where data->>'status' not in ('cancelled','delivered') and exists(select 1 from jsonb_array_elements(data->'items') ordered_item where ordered_item->>'productId'=ident or exists(select 1 from jsonb_array_elements(coalesce(ordered_item->'components','[]')) ordered_component where ordered_component->>'productId'=ident))) then raise exception 'لا يمكن تغيير طريقة المخزون مع وجود طلبات لم تكتمل للمنتج.'; end if;
    if prior is not null and p->>'updatedAt' is distinct from prior->>'updatedAt' then raise exception 'المخزون أو المنتج اتغير. حدّث الصفحة قبل الحفظ.'; end if;
    if s->>'mode'='live' and (p->>'active')::boolean and (p->>'demo')::boolean then raise exception 'لا يمكن نشر بيانات تجريبية أثناء البيع الفعلي.'; end if;
    variants:='[]';
@@ -217,7 +220,7 @@ begin
    return p-'retiredVariants';
  end if;
  if verb='DELETE' and path ~ '^/admin/products/[a-f0-9-]{36}$' then
-   ident:=split_part(path,'/',4); update public.dar_products set data=jsonb_set(jsonb_set(data,'{active}','false'),'{updatedAt}',to_jsonb(public.dar_now_ms())) where id=ident::uuid;
+   ident:=split_part(path,'/',4); update public.dar_products set data=jsonb_set(jsonb_set(data,'{active}','false'),'{updatedAt}',to_jsonb(greatest(public.dar_now_ms(),(data->>'updatedAt')::bigint+1))) where id=ident::uuid;
    if not found then raise exception 'المنتج غير موجود.'; end if;
    insert into public.dar_audit(admin_id,action,entity) values(profile.user_id,'product.hidden',ident); return jsonb_build_object('ok',true);
  end if;
@@ -226,7 +229,7 @@ begin
    perform 1 from public.dar_settings where id=1 for update;
    p:=payload-'_query'; if not(p ? 'branches') then p:=p||jsonb_build_object('branches',s->'branches'); end if;
    perform public.dar_validate_settings(p);
-   if p->>'mode'='live' and exists(select 1 from jsonb_array_elements(public.dar_launch_checks(p)) c where not (c->>'ok')::boolean) then raise exception 'اعتمد بيانات المنتجات والشحن والسياسات قبل تفعيل البيع.'; end if;
+   if p->>'mode'='live' and (p->>'codEnabled')::boolean and exists(select 1 from jsonb_array_elements(public.dar_launch_checks(p)) c where not (c->>'ok')::boolean) then raise exception 'اعتمد بيانات المنتجات والشحن والسياسات قبل تفعيل البيع.'; end if;
    update public.dar_settings set value=p where id=1;
    insert into public.dar_audit(admin_id,action,entity,details) values(profile.user_id,'settings.updated','store',jsonb_build_object('mode',p->>'mode')); return p;
  end if;
@@ -242,6 +245,7 @@ begin
    perform 1 from public.dar_settings where id=1 for update;
    ident:=split_part(path,'/',4); select data into o from public.dar_orders where id=ident::bigint for update;
    if o is null then raise exception 'الطلب غير موجود.'; end if;
+   if payload ? 'updatedAt' and payload->>'updatedAt' is distinct from o->>'updatedAt' then raise exception 'الطلب اتغير. حدّث الصفحة قبل الحفظ.'; end if;
    next_status:=coalesce(payload->>'status',o->>'status'); next_payment:=coalesce(payload->>'paymentStatus',o->>'paymentStatus');
    if next_status<>o->>'status' and not ((o->>'status'='new' and next_status in ('confirmed','cancelled')) or (o->>'status'='confirmed' and next_status in ('preparing','cancelled')) or (o->>'status'='preparing' and next_status in ('shipped','cancelled')) or (o->>'status'='shipped' and next_status='delivered')) then raise exception 'انتقال حالة الطلب غير متاح.'; end if;
    if next_payment<>o->>'paymentStatus' and not ((o->>'paymentStatus'='unpaid' and next_payment='paid') or (o->>'paymentStatus'='paid' and next_payment='refunded')) then raise exception 'انتقال حالة الدفع غير متاح.'; end if;
@@ -266,7 +270,7 @@ begin
      end loop;
    end if;
    if length(coalesce(payload->>'note',''))>3000 or length(coalesce(payload->>'tracking',''))>300 then raise exception 'ملاحظات الطلب طويلة جدًا.'; end if;
-   patch:=jsonb_build_object('status',next_status,'paymentStatus',next_payment,'note',coalesce(payload->>'note',o->>'note'),'tracking',coalesce(payload->>'tracking',o->>'tracking'),'updatedAt',public.dar_now_ms()); o:=o||patch;
+   patch:=jsonb_build_object('status',next_status,'paymentStatus',next_payment,'note',coalesce(payload->>'note',o->>'note'),'tracking',coalesce(payload->>'tracking',o->>'tracking'),'updatedAt',greatest(public.dar_now_ms(),(o->>'updatedAt')::bigint+1)); o:=o||patch;
    update public.dar_orders set data=o where id=ident::bigint;
    insert into public.dar_audit(admin_id,action,entity,details) values(profile.user_id,'order.updated',ident,patch); return o;
  end if;
@@ -276,7 +280,8 @@ begin
  if action='GET /admin/users' then return coalesce((select jsonb_agg(jsonb_build_object('id',admin_profile.user_id,'username',u.email,'name',admin_profile.name,'role',admin_profile.role,'active',admin_profile.active,'createdAt',floor(extract(epoch from admin_profile.created_at)*1000)::bigint)) from public.dar_admin_profiles admin_profile join auth.users u on u.id=admin_profile.user_id),'[]'); end if;
  if verb in ('PUT','POST','DELETE') and (path='/admin/users' or path ~ '^/admin/users/[a-f0-9-]{36}$') then
    uid:=case when verb='POST' then (payload->>'id')::uuid else split_part(path,'/',4)::uuid end;
-   if uid is null then raise exception 'أنشئ المستخدم أولًا من Supabase Auth، ثم أضف معرف حسابه وصلاحياته.'; end if;
+   if uid is null or not exists(select 1 from auth.users where id=uid and email_confirmed_at is not null) then raise exception 'أنشئ حسابًا مؤكدًا في Supabase Authentication، ثم انسخ User UID هنا.'; end if;
+   if exists(select 1 from public.dar_admin_profiles where user_id=uid and active and role='owner') and (verb='DELETE' or payload->>'role'='manager' or payload->>'active'='false') and (select count(*) from public.dar_admin_profiles where active and role='owner')<=1 then raise exception 'لا يمكن إلغاء صلاحية آخر مالك للمتجر.'; end if;
    if uid=profile.user_id and (verb='DELETE' or payload->>'role'='manager' or payload->>'active'='false') then raise exception 'لا يمكن إلغاء صلاحيات حسابك أثناء استخدامه.'; end if;
    if verb='DELETE' then update public.dar_admin_profiles set active=false where user_id=uid;
    else

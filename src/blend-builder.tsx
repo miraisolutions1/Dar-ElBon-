@@ -117,7 +117,7 @@ export function BlendBuilder({ standalone = false }: { standalone?: boolean }) {
   return (
     <section className="blend-builder" aria-labelledby="blend-builder-title">
       <header className="bb-heading">
-        <span className="bb-eyebrow">تجربة توليفة على ذوقك</span>
+        <span className="bb-eyebrow">توليفة على ذوقك</span>
         <Heading id="blend-builder-title">كوّن توليفتك</Heading>
         <p>اختار من ٨ أنواع، وظبّط نسب توليفتك بخطوات ٥٠ جم. اختار الطحنة وأضفها للسلة.</p>
       </header>
@@ -264,14 +264,14 @@ export function BlendBuilder({ standalone = false }: { standalone?: boolean }) {
                   'dar-coffee-preview-blend',
                   JSON.stringify({ amounts: effectiveAmounts, savedAt: Date.now(), preview: true }),
                 );
-                setMessage('اتحفظت وصفة المعاينة على جهازك. ده حفظ للوصفة فقط، مش طلب شراء.');
+                setMessage('اتحفظت توليفتك على جهازك. لطلبها، أضفها للسلة وكمّل الطلب.');
               } catch {
-                setMessage('تعذّر حفظ الوصفة على جهازك. تقدر تكمّل التجربة هنا.');
+                setMessage('تعذّر حفظ الوصفة على جهازك. تقدر تكمّل اختيارك هنا.');
               }
             }}
           >
             <Bookmark size={17} />
-            احفظ وصفة المعاينة
+            احفظ توليفتك
           </button>
           <button
             className="bb-reset"
@@ -280,15 +280,13 @@ export function BlendBuilder({ standalone = false }: { standalone?: boolean }) {
                 const stored = localStorage.getItem('dar-coffee-preview-blend');
                 const restored = stored ? validateSavedBlend(JSON.parse(stored)) : null;
                 if (!restored) {
-                  setMessage('مفيش وصفة معاينة محفوظة صالحة على جهازك. احفظ وصفة من هنا الأول.');
+                  setMessage('مفيش توليفة محفوظة على جهازك. احفظ توليفتك من هنا الأول.');
                   return;
                 }
                 setAmounts(restored);
-                setMessage(
-                  'اتحمّلت وصفة المعاينة المحفوظة على جهازك. تقدر تعدّلها وتجرّب من جديد.',
-                );
+                setMessage('اتحمّلت توليفتك المحفوظة. تقدر تعدّلها أو تضيفها للسلة.');
               } catch {
-                setMessage('تعذّر تحميل الوصفة المحفوظة. تقدر تبدأ تجربة جديدة هنا.');
+                setMessage('تعذّر تحميل الوصفة المحفوظة. تقدر تكوّن توليفة جديدة هنا.');
               }
             }}
           >
