@@ -225,6 +225,7 @@ try {
   await expect(page.locator('.home-featured')).toContainText('حكايتك تبدأ باختيارك');
   await expect(page.locator('.brew-motion')).toHaveCount(0);
   await page.screenshot({ path: '.local/landing-packages-desktop.png', fullPage: false });
+  await page.locator('.home-featured').screenshot({path:'.local/premium-store-desktop.png'});
   await page.goto(site + '#/shop');
   await expect(page.locator('.package-card')).toHaveCount(2);
   await expect(page.locator('.package-grid')).not.toContainText('حبوب للتوليف');

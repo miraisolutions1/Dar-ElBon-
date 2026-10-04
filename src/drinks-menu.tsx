@@ -68,7 +68,7 @@ export function DrinksMenu({ compact = false }: { compact?: boolean }) {
       (category === 'all' || drink.category === category),
   );
   return (
-    <div className="container page-space drinks-menu">
+    <div className={`container page-space drinks-menu ${compact ? 'drinks-menu-compact' : ''}`}>
       <header className="drinks-menu-heading">
         <span className="eyebrow">الحكاية في الفنجان</span>
         {compact ? <h2>لحكايتك في الفرع، فنجان تاني.</h2> : <h1>مزاجك النهارده إيه؟</h1>}

@@ -40,6 +40,8 @@ import {
   AuditPage,
   AccountPage,
 } from './admin';
+import './premium-theme.css';
+
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: boolean }> {
   state = { error: false };
   static getDerivedStateFromError() {

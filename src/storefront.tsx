@@ -310,17 +310,24 @@ export function Home() {
             </Link>
           </div>
           <img
-            src="/images/brewing-editorial.webp"
-            alt="فنجان قهوة وطرق تحضير مختلفة"
+            src="/images/drink-espresso.webp"
+            alt="فنجان إسبريسو على خلفية دافئة"
             loading="lazy"
           />
         </div>
       </section>
     ),
     recipes: (
-      <>
-        <RecipeCards />
-      </>
+      <section className="container home-learn-note">
+        <div>
+          <span className="eyebrow">تفاصيل صغيرة، تفرق في الفنجان</span>
+          <h2>القهوة الحلوة تبدأ من طريقة تحضيرها.</h2>
+          <p>من الكنكة للفلتر. خطوات بسيطة، ومقادير واضحة، وحكاية تستاهل تتعمل على الهادي.</p>
+        </div>
+        <Link className="text-link" to="/learn">
+          اكتشف طرق التحضير <ArrowLeft size={18} />
+        </Link>
+      </section>
     ),
     experience: <DrinksMenu compact />,
     brewing: (
