@@ -221,15 +221,15 @@ try {
   );
   assert.equal(save.body.payload.variants[0].price, 20100);
   await page.goto(site);
-  await expect(page.locator('.package-card')).toHaveCount(2);
+  await expect(page.locator('.package-card')).toHaveCount(4);
   await expect(page.locator('.home-featured')).toContainText('حكايتك تبدأ باختيارك');
   await expect(page.locator('.brew-motion')).toHaveCount(0);
   await page.screenshot({ path: '.local/landing-packages-desktop.png', fullPage: false });
   await page.locator('.home-featured').screenshot({ path: '.local/premium-store-desktop.png' });
   await page.goto(site + '#/shop');
-  await expect(page.locator('.package-card')).toHaveCount(2);
+  await expect(page.locator('.package-card')).toHaveCount(4);
   await expect(page.locator('.package-grid')).not.toContainText('حبوب للتوليف');
-  await page.locator('.package-card.pouch .package-bottom a').click();
+  await page.locator('.package-card.pouch .package-bottom a').first().click();
   await page.getByRole('button', { name: 'غامق', exact: true }).click();
   await page.getByRole('button', { name: 'محوج', exact: true }).click();
   await expect(page.getByRole('button', { name: 'غامق', exact: true })).toHaveClass(/selected/);
@@ -246,7 +246,7 @@ try {
   });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(site);
-  await expect(page.locator('.package-card')).toHaveCount(2);
+  await expect(page.locator('.package-card')).toHaveCount(4);
   assert(
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
     'Mobile landing must not overflow',

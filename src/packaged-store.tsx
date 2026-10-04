@@ -1,41 +1,56 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Bean } from 'lucide-react';
-import { money, startingVariant, type Product } from './lib';
+import { money, type Product } from './lib';
 import { packageGroups, packageKey, packageTitle } from './packaged-coffee';
 import './packaged-store.css';
 
 export function PackageCards({ products }: { products: Product[] }) {
   return (
     <div className="package-grid">
-      {packageGroups(products).map((group) => {
-        const product = group.find((p) => p.roast === 'وسط') || group[0];
-        const minPrice = Math.min(...group.flatMap((p) => p.variants.map((v) => v.price)));
-        return (
-          <article className={`package-card ${packageKey(product)}`} key={packageKey(product)}>
-            <Link to={`/products/${product.slug}`} className="package-photo">
-              <span className="package-label">
-                {packageKey(product) === 'tin' ? 'العلبة السوداء' : 'اختيارك اليومي'}
-              </span>
-              <img src={product.image} alt={packageTitle(product)} loading="lazy" />
-            </Link>
-            <div className="package-copy">
-              <span className="eyebrow">الحكاية في الفنجان.</span>
-              <h3>{packageTitle(product)}</h3>
-              <p>اختار التحميص اللي تحبه، سادة أو محوج، والوزن المناسب ليك.</p>
-              <div className="package-bottom">
-                <span>
-                  يبدأ من{' '}
-                  <strong>
-                    {money(Number.isFinite(minPrice) ? minPrice : startingVariant(product).price)}
-                  </strong>
-                </span>
-                <Link className="btn" to={`/products/${product.slug}`}>
-                  اختار تفاصيل عبوتك <ArrowLeft size={18} />
+      {packageGroups(products).flatMap((group) => {
+        const weights = [
+          ...new Set(group.flatMap((product) => product.variants.map((v) => v.weight))),
+        ].sort((a, b) => a - b);
+        return weights.map((weight) => {
+          const candidates = group.filter((p) => p.variants.some((v) => v.weight === weight));
+          const product = candidates.find((p) => p.roast === 'وسط') || candidates[0];
+          const variant = product.variants.find((v) => v.weight === weight)!;
+          const minPrice = Math.min(
+            ...candidates.flatMap((p) =>
+              p.variants.filter((v) => v.weight === weight).map((v) => v.price),
+            ),
+          );
+          const href = `/products/${product.slug}?variant=${encodeURIComponent(variant.id!)}`;
+          return (
+            <article
+              className={`package-card ${packageKey(product)}`}
+              key={`${packageKey(product)}-${weight}`}
+            >
+              <Link to={href} className="package-photo">
+                <span className="package-label">{weight} جم</span>
+                <img
+                  src={product.image}
+                  alt={`${packageTitle(product)} — ${weight} جم`}
+                  loading="lazy"
+                />
+              </Link>
+              <div className="package-copy">
+                <Link to={href}>
+                  <h3>{packageTitle(product)}</h3>
                 </Link>
+                <p>سادة أو محوج · تحميص على مزاجك</p>
+                <div className="package-bottom">
+                  <span>
+                    يبدأ من <strong>{money(minPrice)}</strong>
+                  </span>
+                  <Link className="btn" to={href}>
+                    اختار عبوتك <ArrowLeft size={16} />
+                  </Link>
+                </div>
               </div>
-            </div>
-          </article>
-        );
+            </article>
+          );
+        });
       })}
     </div>
   );

@@ -12,7 +12,7 @@ test('desktop purchase persists, appears in admin, and follows fulfillment updat
   await page.screenshot({ path: '.local/screenshots/home-desktop.png', fullPage: true });
   await page.getByRole('link', { name: 'اختار قهوتك', exact: true }).click();
   await expect(page).toHaveURL(/\/shop$/);
-  await page.locator('.package-card.tin .package-bottom a').click();
+  await page.locator('.package-card.tin .package-bottom a').first().click();
   await page.getByRole('button', { name: 'أضف للسلة', exact: true }).click();
   await page.getByRole('link', { name: /راجع السلة/ }).click();
   await page.reload();
@@ -59,12 +59,12 @@ test('mobile browsing, filters and cart remain usable without horizontal overflo
   await page.screenshot({ path: '.local/screenshots/home-mobile.png', fullPage: true });
   await page.getByRole('button', { name: 'فتح القائمة' }).click();
   await page.getByRole('link', { name: 'المتجر', exact: true }).click();
-  await expect(page.locator('.package-card')).toHaveCount(2);
+  await expect(page.locator('.package-card')).toHaveCount(4);
   await expect(page.locator('.package-grid')).not.toContainText('حبوب للتوليف');
   await page.getByLabel('ابحث عن عبوة').fill('محوج');
-  await expect(page.locator('.package-card')).toHaveCount(1);
+  await expect(page.locator('.package-card')).toHaveCount(2);
   await page.getByLabel('ابحث عن عبوة').fill('');
-  await page.locator('.package-card.tin .package-bottom a').click();
+  await page.locator('.package-card.tin .package-bottom a').first().click();
   await page.getByRole('button', { name: '500 جم', exact: true }).click();
   await page.getByLabel('الطحنة المناسبة').selectOption('حبوب كاملة');
   await page.getByRole('button', { name: 'أضف للسلة', exact: true }).click();
@@ -115,7 +115,7 @@ test('homepage weight choice survives reload and adds the selected weight to car
   page,
 }) => {
   await page.goto('/');
-  await page.locator('.package-card.tin .package-bottom a').click();
+  await page.locator('.package-card.tin .package-bottom a').first().click();
   await page.getByRole('button', { name: '500 جم', exact: true }).click();
   await expect(page).toHaveURL(/variant=/);
   await page.reload();
@@ -141,7 +141,7 @@ test('header search and mobile navigation keep the active panel consistent', asy
   await page.getByLabel('كلمة البحث').fill('محوج');
   await page.getByRole('button', { name: 'بحث', exact: true }).click();
   await expect(page).toHaveURL(/shop\?q=/);
-  await expect(page.locator('.package-card.tin .package-bottom a')).toBeVisible();
+  await expect(page.locator('.package-card.tin .package-bottom a').first()).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'فتح القائمة' }).click();
   await expect(page.getByRole('navigation', { name: 'القائمة الرئيسية' })).toBeVisible();
@@ -288,7 +288,7 @@ test('pickup checkout stores the selected branch and shows it in the secure admi
   page,
 }) => {
   await page.goto('/shop');
-  await page.locator('.package-card.tin .package-bottom a').click();
+  await page.locator('.package-card.tin .package-bottom a').first().click();
   await page.getByRole('button', { name: 'أضف للسلة', exact: true }).click();
   await page.getByRole('link', { name: /راجع السلة/ }).click();
   await page.getByRole('link', { name: 'كمّل الطلب', exact: true }).click();
