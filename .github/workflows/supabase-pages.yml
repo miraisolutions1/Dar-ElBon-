@@ -2,6 +2,11 @@ name: Publish Supabase storefront
 
 on:
   workflow_dispatch:
+    inputs:
+      check_only:
+        description: Check database readiness without publishing
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -60,15 +65,19 @@ jobs:
           });
           const data = await response.json();
           if (!response.ok || !data.settings || !Array.isArray(data.products) || !data.products.length) {
-            throw new Error('Supabase tables/catalog are not ready. Run supabase/setup.sql in SQL Editor before publishing.');
+            console.error('::error::Supabase readiness HTTP ' + response.status + ' / ' + (data.code || 'invalid-catalog') + '. Run supabase/setup.sql in SQL Editor before publishing.');
+            throw new Error('Supabase database/catalog is not ready.');
           }
           const privateResponse = await fetch(url + '/rest/v1/dar_orders?select=id&limit=1', { headers: { apikey: key } });
           if (privateResponse.ok) throw new Error('Order access must be private. Review SQL grants before publishing.');
-          console.log('Database catalog and anonymous order-access protection verified.');
+          console.log('Database catalog and anonymous order-access protection verified. Products: ' + data.products.length);
+          console.log('::notice::Supabase ready: ' + data.products.length + ' products, protected order tables.');
           JS
       - name: Install dependencies
+        if: ${{ !inputs.check_only }}
         run: npm ci
       - name: Verify and build the connected storefront
+        if: ${{ !inputs.check_only }}
         env:
           VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
@@ -76,12 +85,14 @@ jobs:
           npm run build
           node scripts/build-supabase-pages.mjs
       - name: Save the reviewable site artifact
+        if: ${{ !inputs.check_only }}
         uses: actions/upload-artifact@v4
         with:
           name: supabase-storefront-pages
           path: docs
           include-hidden-files: true
       - name: Commit the generated site
+        if: ${{ !inputs.check_only }}
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -93,6 +104,7 @@ jobs:
       # GITHUB_TOKEN commits do not automatically start Pages builds, so ask for
       # a native branch build explicitly without changing the Pages source.
       - name: Request the native GitHub Pages build
+        if: ${{ !inputs.check_only }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
