@@ -18,6 +18,7 @@ export function matchTasteProducts(products: Product[], answers: TasteAnswers) {
     .filter(
       (product) =>
         product.active &&
+        product.kind !== 'حبوب للتوليف' &&
         product.brew.includes(answers.brew) &&
         (answers.kind === 'any' || product.kind === answers.kind),
     )

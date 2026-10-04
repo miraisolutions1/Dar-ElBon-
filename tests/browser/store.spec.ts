@@ -12,7 +12,7 @@ test('desktop purchase persists, appears in admin, and follows fulfillment updat
   await page.screenshot({ path: '.local/screenshots/home-desktop.png', fullPage: true });
   await page.getByRole('link', { name: 'اختار قهوتك', exact: true }).click();
   await expect(page).toHaveURL(/\/shop$/);
-  await page.getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي', exact: true }).click();
+  await page.locator('.package-card.tin .package-bottom a').click();
   await page.getByRole('button', { name: 'أضف للسلة', exact: true }).click();
   await page.getByRole('link', { name: /راجع السلة/ }).click();
   await page.reload();
@@ -59,11 +59,12 @@ test('mobile browsing, filters and cart remain usable without horizontal overflo
   await page.screenshot({ path: '.local/screenshots/home-mobile.png', fullPage: true });
   await page.getByRole('button', { name: 'فتح القائمة' }).click();
   await page.getByRole('link', { name: 'المتجر', exact: true }).click();
-  await page.getByLabel('طريقة التحضير', { exact: true }).selectOption('فلتر');
-  await expect(page.locator('.product-grid .product-card')).toHaveCount(8);
-  await expect(page.getByRole('link', { name: /^اختيار (بن )?برازيلي$/ })).toBeVisible();
-  await page.getByLabel('طريقة التحضير', { exact: true }).selectOption('');
-  await page.getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي', exact: true }).click();
+  await expect(page.locator('.package-card')).toHaveCount(2);
+  await expect(page.locator('.package-grid')).not.toContainText('حبوب للتوليف');
+  await page.getByLabel('ابحث عن عبوة').fill('محوج');
+  await expect(page.locator('.package-card')).toHaveCount(1);
+  await page.getByLabel('ابحث عن عبوة').fill('');
+  await page.locator('.package-card.tin .package-bottom a').click();
   await page.getByRole('button', { name: '500 جم', exact: true }).click();
   await page.getByLabel('الطحنة المناسبة').selectOption('حبوب كاملة');
   await page.getByRole('button', { name: 'أضف للسلة', exact: true }).click();
@@ -114,9 +115,8 @@ test('homepage weight choice survives reload and adds the selected weight to car
   page,
 }) => {
   await page.goto('/');
-  await page
-    .getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي — 500 جم', exact: true })
-    .click();
+  await page.locator('.package-card.tin .package-bottom a').click();
+  await page.getByRole('button', { name: '500 جم', exact: true }).click();
   await expect(page).toHaveURL(/variant=/);
   await page.reload();
   await expect(page.getByRole('button', { name: '500 جم', exact: true })).toHaveClass(/selected/);
@@ -141,9 +141,7 @@ test('header search and mobile navigation keep the active panel consistent', asy
   await page.getByLabel('كلمة البحث').fill('محوج');
   await page.getByRole('button', { name: 'بحث', exact: true }).click();
   await expect(page).toHaveURL(/shop\?q=/);
-  await expect(
-    page.getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي', exact: true }),
-  ).toBeVisible();
+  await expect(page.locator('.package-card.tin .package-bottom a')).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'فتح القائمة' }).click();
   await expect(page.getByRole('navigation', { name: 'القائمة الرئيسية' })).toBeVisible();
@@ -173,9 +171,8 @@ test('home separates branch visits from buying beans and opens the beans for a p
     .locator('.brew-card')
     .filter({ has: page.getByRole('heading', { name: 'إسبريسو', exact: true }) })
     .click();
-  await expect(page).toHaveURL(/\/shop\?brew=/);
-  await expect(page.getByLabel('طريقة التحضير', { exact: true })).toHaveValue('إسبريسو');
-  await expect(page.getByRole('link', { name: /^اختيار (بن )?برازيلي$/ })).toBeVisible();
+  await expect(page).toHaveURL(/\/guide\?brew=/);
+  await expect(page.getByRole('heading', { name: 'الاختيار ده مش متاح حاليًا' })).toBeVisible();
 });
 
 test('coffee quiz matches available beans, preserves answers, and opens the recommended weight', async ({
@@ -250,7 +247,7 @@ test('blend calculator updates weight, price, shares, and saves a preview withou
   page,
 }) => {
   await page.goto('/shop');
-  await page.locator('.blend-shop-banner').click();
+  await page.locator('.custom-blend-callout').click();
   await expect(page).toHaveURL(/\/blend$/);
   await expect(
     page.getByRole('heading', { name: 'كوّن توليفتك', exact: true, level: 1 }),
@@ -291,7 +288,7 @@ test('pickup checkout stores the selected branch and shows it in the secure admi
   page,
 }) => {
   await page.goto('/shop');
-  await page.getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي', exact: true }).click();
+  await page.locator('.package-card.tin .package-bottom a').click();
   await page.getByRole('button', { name: 'أضف للسلة', exact: true }).click();
   await page.getByRole('link', { name: /راجع السلة/ }).click();
   await page.getByRole('link', { name: 'كمّل الطلب', exact: true }).click();
@@ -383,7 +380,7 @@ test('homepage leads with the store, credits link to Mirai, and menu filters hot
     return '';
   });
   expect(firstContentSection).toContain('home-featured');
-  await expect(page.locator('.home-featured h2')).toContainText('متجر دار البن');
+  await expect(page.locator('.home-featured h2')).toContainText('حكايتك تبدأ باختيارك');
   await expect(page.locator('.developer-credit a')).toHaveAttribute(
     'href',
     'https://miraisolutions.net/',

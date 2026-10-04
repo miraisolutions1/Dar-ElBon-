@@ -60,14 +60,18 @@ const filters = [
   { value: 'cold', label: 'حاجة ساقعة' },
 ] as const;
 
-export function DrinksMenu() {
+export function DrinksMenu({ compact = false }: { compact?: boolean }) {
   const [category, setCategory] = useState<'all' | DrinkCategory>('all');
-  const shown = drinks.filter((drink) => category === 'all' || drink.category === category);
+  const shown = drinks.filter(
+    (drink) =>
+      (!compact || ['turkish', 'cappuccino', 'iced-latte', 'lemon-mint'].includes(drink.id)) &&
+      (category === 'all' || drink.category === category),
+  );
   return (
     <div className="container page-space drinks-menu">
       <header className="drinks-menu-heading">
         <span className="eyebrow">الحكاية في الفنجان</span>
-        <h1>مزاجك النهارده إيه؟</h1>
+        {compact ? <h2>لحكايتك في الفرع، فنجان تاني.</h2> : <h1>مزاجك النهارده إيه؟</h1>}
         <p>سخن ولا ساقع؟ شوف التصوّر المقترح للمشروبات، واختار اللي على مزاجك.</p>
       </header>
       <p className="drinks-menu-demo" role="note">

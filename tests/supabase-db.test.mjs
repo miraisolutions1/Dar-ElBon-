@@ -343,3 +343,48 @@ run(
     assert.equal(sql('SET ROLE anon; SELECT count(*) FROM storage.objects;'), '1');
   },
 );
+
+run(
+  'Preview package matrix adds canonical roast/kind SKUs once without changing existing data',
+  () => {
+    const old = sql('SELECT jsonb_agg(data ORDER BY id) FROM public.dar_products;');
+    const orders = sql('SELECT jsonb_agg(data ORDER BY id) FROM public.dar_orders;');
+    sql(readFileSync('supabase/add-packaged-coffee-options.sql', 'utf8'));
+    const products = JSON.parse(sql('SELECT public.dar_store();')).products;
+    assert.equal(products.length, JSON.parse(old).length + 11);
+    for (const image of ['/images/coffee-tin-studio.webp', '/images/coffee-sada-studio.webp']) {
+      const pack = products.filter(
+        (p) => p.image === image && ['فاتح', 'وسط', 'غامق'].includes(p.roast),
+      );
+      assert.equal(pack.length, 6);
+      for (const roast of ['فاتح', 'وسط', 'غامق'])
+        for (const kind of ['سادة', 'محوج'])
+          assert(pack.some((p) => p.roast === roast && p.kind === kind));
+    }
+    for (const p of JSON.parse(old))
+      assert.deepEqual(
+        products.find((next) => next.id === p.id),
+        (() => {
+          const { retiredVariants, ...publicProduct } = p;
+          return publicProduct;
+        })(),
+      );
+    assert.equal(sql('SELECT jsonb_agg(data ORDER BY id) FROM public.dar_orders;'), orders);
+    sql(readFileSync('supabase/add-packaged-coffee-options.sql', 'utf8'));
+    assert.equal(JSON.parse(sql('SELECT public.dar_store();')).products.length, products.length);
+    const p = products.find((p) => p.slug === 'dar-package-pouch-dark-spiced');
+    const input = {
+      idempotencyKey: randomUUID(),
+      customer: { name: 'عميل عبوة', phone: '01098765432', notes: '' },
+      fulfillment: 'pickup',
+      pickupBranchIndex: 1,
+      paymentMethod: 'cod',
+      expectedTotal: p.variants[0].price,
+      items: [{ productId: p.id, variantId: p.variants[0].id, grind: p.grinds[0], quantity: 1 }],
+    };
+    const order = rpc('dar_place_order', input);
+    assert.equal(order.total, p.variants[0].price);
+    assert(order.items[0].name.includes('محوج'));
+    assert(order.items[0].name.includes('غامق'));
+  },
+);

@@ -1,3 +1,5 @@
+import { PackageCards, CustomBlendCallout } from './packaged-store';
+import { isPackagedCoffee, packageKey, packageTitle } from './packaged-coffee';
 import copy from '../content/site-copy-ar.json';
 import experience from '../content/coffee-experience-ar.json';
 import { TasteQuiz, RecipeCards } from './coffee-experience';
@@ -293,21 +295,34 @@ export function StoreLayout() {
 
 export function Home() {
   const { settings, products } = useStore();
-  const featured = products.filter((p) => p.featured);
-  const choices = featured
-    .flatMap((product) => product.variants.map((variant) => ({ product, variant })))
-    .slice(0, 4);
   const coffeeSheet = '/images/brewing-editorial.webp';
   const sections: Record<string, React.ReactNode> = {
     branches: <Branches />,
-    quiz: <TasteQuiz products={products} />,
+    quiz: (
+      <section className="container section">
+        <div className="home-quiz-teaser">
+          <div>
+            <span className="eyebrow">كل مزاج، وله فنجان</span>
+            <h2>لسه بتدور على قهوتك؟</h2>
+            <p>٣ اختيارات بسيطة عن طريقتك وذوقك. نرشّح لك عبوة تناسبك، ونقول لك ليه.</p>
+            <Link className="btn" to="/quiz">
+              اكتشف فنجانك <ArrowLeft size={18} />
+            </Link>
+          </div>
+          <img
+            src="/images/brewing-editorial.webp"
+            alt="فنجان قهوة وطرق تحضير مختلفة"
+            loading="lazy"
+          />
+        </div>
+      </section>
+    ),
     recipes: (
       <>
         <RecipeCards />
-        <BrewMotion />
       </>
     ),
-    experience: <DrinksMenu />,
+    experience: <DrinksMenu compact />,
     brewing: (
       <section className="container section coffee-selection">
         <SectionTitle eyebrow={copy.brewing.eyebrow} title={copy.brewing.title} />
@@ -323,7 +338,7 @@ export function Home() {
             .map(({ name, description, position, number, label, tool }) => (
               <Link
                 key={name}
-                to={`${products.some((p) => p.brew.includes(name)) ? '/shop' : '/guide'}?brew=${encodeURIComponent(name)}`}
+                to={`${products.some((p) => isPackagedCoffee(p) && p.brew.includes(name)) ? '/shop' : '/guide'}?brew=${encodeURIComponent(name)}`}
                 className="brew-card"
               >
                 <div className="brew-topline">
@@ -340,7 +355,7 @@ export function Home() {
                   <h3>{label}</h3>
                   <p>{description}</p>
                   <small className="brew-route-label">
-                    {products.some((p) => p.brew.includes(name))
+                    {products.some((p) => isPackagedCoffee(p) && p.brew.includes(name))
                       ? 'شوف البن المناسب'
                       : 'اعرف طريقة التحضير'}
                     <ArrowLeft size={16} aria-hidden="true" />
@@ -355,23 +370,19 @@ export function Home() {
       </section>
     ),
     featured: (
-      <section className="container section home-featured">
-        <SectionTitle eyebrow={copy.featured.eyebrow} title={copy.featured.title} />
-        <p className="section-intro">{copy.featured.intro}</p>
-        {choices.length ? (
-          <div className={`featured-grid ${choices.length <= 2 ? 'pair' : ''}`}>
-            {choices.map(({ product, variant }) => (
-              <ProductCard key={variant.id} product={product} variant={variant} />
-            ))}
+      <section className="container section home-featured package-store-section">
+        <div className="package-section-heading">
+          <div>
+            <span className="eyebrow">المتجر · قهوة دار البن لبيتك</span>
+            <h2>حكايتك تبدأ باختيارك.</h2>
+            <p>العبوة، التحميص، سادة أو محوج. فنجان معمول على مزاجك.</p>
           </div>
-        ) : (
-          <Empty title="توليفاتنا بتتجهز" description="المنتجات المميزة هتظهر هنا قريبًا." />
-        )}
-        <div className="section-action">
           <Link className="text-link" to="/shop">
-            {copy.featured.allCta} <ArrowLeft size={17} />
+            افتح المتجر <ArrowLeft size={18} />
           </Link>
         </div>
+        <PackageCards products={products} />
+        <CustomBlendCallout />
       </section>
     ),
     story: (
@@ -497,7 +508,13 @@ export function Home() {
           </span>
         </span>
       </div>
-      {['featured', ...settings.sections.filter((s) => s !== 'featured')].map((s) => (
+      {[
+        'featured',
+        ...['brewing', 'story', 'experience', 'recipes', 'quiz', 'branches', 'guide'].filter(
+          (s) =>
+            settings.sections.includes(s) && !(s === 'guide' && settings.sections.includes('quiz')),
+        ),
+      ].map((s) => (
         <div key={s}>{sections[s]}</div>
       ))}
     </>
@@ -508,115 +525,55 @@ export function Shop() {
   const { products } = useStore();
   const [params, setParams] = useSearchParams();
   const q = params.get('q') || '';
-  const brew = params.get('brew') || '';
-  const roast = params.get('roast') || '';
-  const sort = params.get('sort') || '';
-  function update(key: string, value: string) {
-    const next = new URLSearchParams(params);
-    value ? next.set(key, value) : next.delete(key);
-    setParams(next, { replace: true });
-  }
   const norm = (s: string) =>
     s
       .replace(/[أإآ]/g, 'ا')
       .replace(/[\u064B-\u065F]/g, '')
       .toLowerCase();
-  const filtered = products
-    .filter(
-      (p) =>
-        norm(p.name + ' ' + p.description + ' ' + p.kind).includes(norm(q)) &&
-        (!brew || p.brew.includes(brew)) &&
-        (!roast || p.roast === roast),
-    )
-    .sort((a, b) =>
-      sort === 'low'
-        ? startingVariant(a).price - startingVariant(b).price
-        : sort === 'high'
-          ? startingVariant(b).price - startingVariant(a).price
-          : 0,
-    );
+  const packaged = products.filter(isPackagedCoffee);
+  const filtered = packaged.filter((p) => norm(p.name + ' ' + p.description).includes(norm(q)));
   return (
-    <div className="container page-space">
+    <div className="container page-space package-store-section">
       <div className="page-title">
-        <span className="eyebrow">على مزاجك، بالضبط</span>
-        <h1>اختار قهوتك.</h1>
-        <p>توليفات مختلفة، وتفاصيل صغيرة تعمل فرق.</p>
+        <span className="eyebrow">المتجر · الحكاية في الفنجان.</span>
+        <h1>اختار عبوتك. وكملها على مزاجك.</h1>
+        <p>ابدأ بشكل العبوة، وبعدها اختار التحميص وسادة أو محوج والوزن والطحنة.</p>
       </div>
-      <Link className="blend-shop-banner" to="/blend">
-        <span className="blend-banner-icon">
-          <Bean size={28} />
+      <div className="package-order-steps" aria-label="خطوات اختيار القهوة">
+        <span>
+          <b>١</b> اختار العبوة
         </span>
         <span>
-          <strong>توليفة على ذوقك</strong>
-          <small>اختار نسبة كل نوع بن، وشوف وزن وسعر الخلطة — حاسبة معاينة</small>
+          <b>٢</b> التحميص والتوليفة
         </span>
-        <span className="blend-banner-cta">
-          كوّن توليفتك <ArrowLeft size={18} />
+        <span>
+          <b>٣</b> الوزن والطحنة
         </span>
-      </Link>
-      <div className="shop-toolbar">
-        <div className="search-input">
-          <Search size={18} />
-          <input
-            aria-label="ابحث عن خلطة"
-            placeholder="ابحث عن خلطة…"
-            value={q}
-            onChange={(e) => update('q', e.target.value)}
-          />
-        </div>
-        <select
-          aria-label="طريقة التحضير"
-          value={brew}
-          onChange={(e) => update('brew', e.target.value)}
-        >
-          <option value="">كل طرق التحضير</option>
-          {['تركي', 'إسبريسو', 'فلتر'].map((b) => (
-            <option key={b}>{b}</option>
-          ))}
-        </select>
-        <select
-          aria-label="ترتيب المنتجات"
-          value={sort}
-          onChange={(e) => update('sort', e.target.value)}
-        >
-          <option value="">الترتيب الافتراضي</option>
-          <option value="low">السعر: من الأقل</option>
-          <option value="high">السعر: من الأعلى</option>
-        </select>
       </div>
-      <div className="row between filter-row">
-        <div className="pills">
-          {['', 'فاتح', 'وسط', 'غامق'].map((r) => (
-            <button
-              key={r}
-              className={roast === r ? 'selected' : ''}
-              onClick={() => update('roast', r)}
-            >
-              {r || 'كل التحميص'}
-            </button>
-          ))}
-        </div>
-        <span className="muted tiny">{filtered.length} منتجات</span>
+      <div className="search-input package-search">
+        <Search size={18} />
+        <input
+          aria-label="ابحث عن عبوة"
+          placeholder="بتدور على عبوة؟"
+          value={q}
+          onChange={(e) =>
+            setParams(e.target.value ? { q: e.target.value } : {}, { replace: true })
+          }
+        />
       </div>
       {filtered.length ? (
-        <div className="product-grid">
-          {filtered.map((p) => (
-            <ProductCard product={p} key={p.id} />
-          ))}
-        </div>
+        <PackageCards products={filtered} />
       ) : (
-        <Empty title="لسه ما لقيناش التوليفة دي" description="جرّب تغيير البحث أو طريقة التحضير.">
-          <button className="btn secondary" onClick={() => setParams({})}>
-            عرض كل القهوة
-          </button>
-        </Empty>
+        <Empty title="مفيش عبوة بالاسم ده" description="جرّب اسم تاني أو اعرض كل العبوات." />
       )}
+      <CustomBlendCallout />
     </div>
   );
 }
 
 export function ProductPage() {
   const { slug } = useParams();
+  const navigate = useNavigate();
   const [params] = useSearchParams();
   const requestedVariant = params.get('variant') || '';
   const { products, settings } = useStore();
@@ -633,6 +590,19 @@ export function ProductPage() {
     setAdded(false);
   }, [slug, requestedVariant]);
   if (!product) return <NotFound />;
+  if (!isPackagedCoffee(product))
+    return (
+      <div className="container page-space">
+        <CustomBlendCallout />
+      </div>
+    );
+  const siblings = products.filter(
+    (p) => isPackagedCoffee(p) && packageKey(p) === packageKey(product),
+  );
+  function chooseDetails(roast: string, kind: string) {
+    const next = siblings.find((p) => p.roast === roast && p.kind === kind);
+    if (next) navigate(`/products/${next.slug}`);
+  }
   const variant = product.variants.find((v) => v.id === variantId) || startingVariant(product);
   const selectedGrind = product.grinds.includes(grind) ? grind : product.grinds[0];
   const available = variant ? stock(product, variant) : 0;
@@ -654,18 +624,51 @@ export function ProductPage() {
           <span className="eyebrow">
             {product.brew.join(' / ')} · تحميص {product.roast}
           </span>
-          <h1>{product.name}</h1>
+          <h1>{packageTitle(product)}</h1>
           <p className="description">{product.description}</p>
           <strong className="detail-price">{money(variant?.price || 0)}</strong>
           {product.demo && <span className="muted tiny">سعر ووزن تجريبيان لحين الاعتماد</span>}
+          <fieldset className="package-choice">
+            <legend>١ · اختار التحميص</legend>
+            <div className="pills">
+              {['فاتح', 'وسط', 'غامق'].map((roast) => (
+                <button
+                  type="button"
+                  key={roast}
+                  className={product.roast === roast ? 'selected' : ''}
+                  disabled={!siblings.some((p) => p.roast === roast && p.kind === product.kind)}
+                  onClick={() => chooseDetails(roast, product.kind)}
+                >
+                  {roast}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          <fieldset className="package-choice">
+            <legend>٢ · سادة ولا محوج؟</legend>
+            <div className="pills">
+              {['سادة', 'محوج'].map((kind) => (
+                <button
+                  type="button"
+                  key={kind}
+                  className={product.kind === kind ? 'selected' : ''}
+                  disabled={!siblings.some((p) => p.kind === kind && p.roast === product.roast)}
+                  onClick={() => chooseDetails(product.roast, kind)}
+                >
+                  {kind}
+                </button>
+              ))}
+            </div>
+          </fieldset>
           <fieldset>
-            <legend>اختار الوزن</legend>
+            <legend>٣ · اختار الوزن</legend>
             <div className="pills weight-pills">
               {product.variants.map((v) => (
                 <button
                   key={v.id}
                   className={v.id === variant?.id ? 'selected' : ''}
                   onClick={() => {
+                    navigate(`/products/${product.slug}?variant=${encodeURIComponent(v.id!)}`);
                     setVariant(v.id!);
                     setQuantity(1);
                     setAdded(false);
@@ -1314,7 +1317,7 @@ export function Guide() {
     copy.brewing.items.map((item) => [item.name, item.guideText]),
   );
   const choices = products.filter(
-    (p) => (!brew || p.brew.includes(brew)) && (!roast || p.roast === roast),
+    (p) => isPackagedCoffee(p) && (!brew || p.brew.includes(brew)) && (!roast || p.roast === roast),
   );
   return (
     <div className="container page-space">

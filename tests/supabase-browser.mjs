@@ -2,6 +2,7 @@
 // responses are routed fixtures; this does not test hosted SQL, RLS or deployment.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
@@ -37,6 +38,33 @@ try {
     password,
   });
   const profile = { id, username: email, name: 'مدير الاختبار', role: 'owner' };
+  // Isolated package choices: the public migration adds the same SKU matrix.
+  for (const template of allProducts(db).filter((p) => p.stockMode === 'units')) {
+    for (const roast of ['فاتح', 'وسط', 'غامق'])
+      for (const kind of ['سادة', 'محوج']) {
+        if (
+          allProducts(db).some(
+            (p) => p.image === template.image && p.roast === roast && p.kind === kind,
+          )
+        )
+          continue;
+        saveProduct(
+          db,
+          randomUUID(),
+          {
+            ...template,
+            id: undefined,
+            slug: `fixture-${template.slug}-${['فاتح', 'وسط', 'غامق'].indexOf(roast)}-${kind === 'سادة' ? 'plain' : 'spiced'}`,
+            name: `عبوة اختبار ${kind} ${roast}`,
+            roast,
+            kind,
+            variants: template.variants.map(({ id, ...variant }) => variant),
+          },
+          profile,
+        );
+      }
+  }
+
   const jwt =
     [
       { alg: 'HS256', typ: 'JWT' },
@@ -192,6 +220,38 @@ try {
     (call) => call.name === 'dar_admin' && call.body.action.startsWith('PUT /admin/products/'),
   );
   assert.equal(save.body.payload.variants[0].price, 20100);
+  await page.goto(site);
+  await expect(page.locator('.package-card')).toHaveCount(2);
+  await expect(page.locator('.home-featured')).toContainText('حكايتك تبدأ باختيارك');
+  await expect(page.locator('.brew-motion')).toHaveCount(0);
+  await page.screenshot({ path: '.local/landing-packages-desktop.png', fullPage: false });
+  await page.goto(site + '#/shop');
+  await expect(page.locator('.package-card')).toHaveCount(2);
+  await expect(page.locator('.package-grid')).not.toContainText('حبوب للتوليف');
+  await page.locator('.package-card.pouch .package-bottom a').click();
+  await page.getByRole('button', { name: 'غامق', exact: true }).click();
+  await page.getByRole('button', { name: 'محوج', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'غامق', exact: true })).toHaveClass(/selected/);
+  await expect(page.getByRole('button', { name: 'محوج', exact: true })).toHaveClass(/selected/);
+  await page.getByRole('button', { name: 'أضف للسلة', exact: true }).click();
+  await page.goto(site + '#/cart');
+  await expect(page.locator('.cart-item')).toContainText('محوج غامق');
+  await page.reload();
+  await expect(page.locator('.cart-item')).toContainText('محوج غامق');
+  // Reset only synthetic cart state before the independent blend scenario.
+  await page.evaluate(() => {
+    for (const key of Object.keys(localStorage))
+      if (key.includes('cart')) localStorage.removeItem(key);
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(site);
+  await expect(page.locator('.package-card')).toHaveCount(2);
+  assert(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'Mobile landing must not overflow',
+  );
+  await page.screenshot({ path: '.local/landing-packages-mobile.png', fullPage: false });
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto(site + '#/blend');
   await expect(page.locator('.bb-origin')).toHaveCount(8);
   await expect(page.getByText(email, { exact: true })).toHaveCount(0);
