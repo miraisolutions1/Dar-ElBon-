@@ -794,3 +794,24 @@
   background: #fff5c7;
   color: #49391d;
 }
+
+/* Touch controls and readable fields on narrow screens. */
+@media (max-width: 760px) {
+  .storefront .icon-button,
+  .admin-app .icon-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .storefront .package-bottom .btn,
+  .admin-app .admin-tabs button {
+    min-height: 44px;
+  }
+  .storefront input:not([type='radio']):not([type='checkbox']),
+  .storefront select,
+  .storefront textarea,
+  .admin-app input:not([type='radio']):not([type='checkbox']),
+  .admin-app select,
+  .admin-app textarea {
+    font-size: 16px;
+  }
+}
