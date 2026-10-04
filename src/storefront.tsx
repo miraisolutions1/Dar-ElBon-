@@ -583,19 +583,22 @@ export function ProductPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const requestedVariant = params.get('variant') || '';
+  const requestedGrind = params.get('grind') || '';
   const { products, settings } = useStore();
   const { add } = useCart();
   const product = products.find((p) => p.slug === slug);
   const [variantId, setVariant] = useState(requestedVariant);
-  const [grind, setGrind] = useState('');
+  const [grind, setGrind] = useState(requestedGrind);
+  const [choiceNotice, setChoiceNotice] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   useEffect(() => {
     setVariant(requestedVariant);
-    setGrind('');
+    setGrind(requestedGrind);
+    setChoiceNotice('');
     setQuantity(1);
     setAdded(false);
-  }, [slug, requestedVariant]);
+  }, [slug, requestedVariant, requestedGrind]);
   if (!product) return <NotFound />;
   if (!isPackagedCoffee(product))
     return (
@@ -608,7 +611,19 @@ export function ProductPage() {
   );
   function chooseDetails(roast: string, kind: string) {
     const next = siblings.find((p) => p.roast === roast && p.kind === kind);
-    if (next) navigate(`/products/${next.slug}`);
+    if (!next) return;
+    const nextVariant = next.variants.find((v) => v.weight === variant?.weight);
+    if (!nextVariant) {
+      setChoiceNotice('الوزن اللي اخترته مش متاح مع الاختيار ده. اختار وزن تاني الأول.');
+      return;
+    }
+    const query = new URLSearchParams({ variant: nextVariant.id! });
+    if (!next.grinds.includes(selectedGrind)) {
+      setChoiceNotice('الطحنة اللي اخترتها مش متاحة مع الاختيار ده. اختار طحنة تانية الأول.');
+      return;
+    }
+    query.set('grind', selectedGrind);
+    navigate(`/products/${next.slug}?${query}`);
   }
   const variant = product.variants.find((v) => v.id === variantId) || startingVariant(product);
   const selectedGrind = product.grinds.includes(grind) ? grind : product.grinds[0];
@@ -635,6 +650,7 @@ export function ProductPage() {
           <p className="description">{product.description}</p>
           <strong className="detail-price">{money(variant?.price || 0)}</strong>
           {product.demo && <span className="muted tiny">سعر ووزن تجريبيان لحين الاعتماد</span>}
+          {choiceNotice && <Alert kind="info">{choiceNotice}</Alert>}
           <fieldset className="package-choice">
             <legend>١ · اختار التحميص</legend>
             <div className="pills">
@@ -675,7 +691,8 @@ export function ProductPage() {
                   key={v.id}
                   className={v.id === variant?.id ? 'selected' : ''}
                   onClick={() => {
-                    navigate(`/products/${product.slug}?variant=${encodeURIComponent(v.id!)}`);
+                    const query = new URLSearchParams({ variant: v.id!, grind: selectedGrind });
+                    navigate(`/products/${product.slug}?${query}`);
                     setVariant(v.id!);
                     setQuantity(1);
                     setAdded(false);

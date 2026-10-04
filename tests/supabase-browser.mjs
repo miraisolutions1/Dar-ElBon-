@@ -229,16 +229,29 @@ try {
   await page.goto(site + '#/shop');
   await expect(page.locator('.package-card')).toHaveCount(4);
   await expect(page.locator('.package-grid')).not.toContainText('حبوب للتوليف');
-  await page.locator('.package-card.pouch .package-bottom a').first().click();
+  const card = page
+    .locator('.package-card.pouch')
+    .filter({ has: page.locator('h3 small', { hasText: '500 جم' }) });
+  const displayedPrice = await card.locator('.package-bottom strong').textContent();
+  await card.locator('.package-bottom a').click();
+  await expect(page.locator('.detail-price')).toHaveText(displayedPrice);
+  await page.getByLabel('الطحنة المناسبة').selectOption('حبوب كاملة');
   await page.getByRole('button', { name: 'غامق', exact: true }).click();
   await page.getByRole('button', { name: 'محوج', exact: true }).click();
   await expect(page.getByRole('button', { name: 'غامق', exact: true })).toHaveClass(/selected/);
   await expect(page.getByRole('button', { name: 'محوج', exact: true })).toHaveClass(/selected/);
+  await expect(page.getByRole('button', { name: '500 جم', exact: true })).toHaveClass(/selected/);
+  await expect(page.getByLabel('الطحنة المناسبة')).toHaveValue('حبوب كاملة');
+  await page.reload();
+  await expect(page.getByRole('button', { name: '500 جم', exact: true })).toHaveClass(/selected/);
+  await expect(page.getByLabel('الطحنة المناسبة')).toHaveValue('حبوب كاملة');
   await page.getByRole('button', { name: 'أضف للسلة', exact: true }).click();
   await page.goto(site + '#/cart');
   await expect(page.locator('.cart-item')).toContainText('محوج غامق');
+  await expect(page.locator('.cart-item')).toContainText('500 جم · حبوب كاملة');
   await page.reload();
   await expect(page.locator('.cart-item')).toContainText('محوج غامق');
+  await expect(page.locator('.cart-item')).toContainText('500 جم · حبوب كاملة');
   // Reset only synthetic cart state before the independent blend scenario.
   await page.evaluate(() => {
     for (const key of Object.keys(localStorage))

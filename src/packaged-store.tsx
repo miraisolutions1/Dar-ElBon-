@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Bean } from 'lucide-react';
-import { money, type Product } from './lib';
+import { money, stock, type Product } from './lib';
 import { packageGroups, packageKey, packageTitle } from './packaged-coffee';
 import './packaged-store.css';
 
@@ -13,13 +13,15 @@ export function PackageCards({ products }: { products: Product[] }) {
         ].sort((a, b) => a - b);
         return weights.map((weight) => {
           const candidates = group.filter((p) => p.variants.some((v) => v.weight === weight));
-          const product = candidates.find((p) => p.roast === 'وسط') || candidates[0];
-          const variant = product.variants.find((v) => v.weight === weight)!;
-          const minPrice = Math.min(
-            ...candidates.flatMap((p) =>
-              p.variants.filter((v) => v.weight === weight).map((v) => v.price),
-            ),
+          const choices = candidates.flatMap((product) =>
+            product.variants
+              .filter((v) => v.weight === weight)
+              .map((variant) => ({ product, variant })),
           );
+          const available = choices.filter(({ product, variant }) => stock(product, variant) > 0);
+          const { product, variant } = (available.length ? available : choices).sort(
+            (a, b) => a.variant.price - b.variant.price,
+          )[0];
           const href = `/products/${product.slug}?variant=${encodeURIComponent(variant.id!)}`;
           return (
             <article
@@ -36,12 +38,14 @@ export function PackageCards({ products }: { products: Product[] }) {
               </Link>
               <div className="package-copy">
                 <Link to={href}>
-                  <h3>{packageTitle(product)}</h3>
+                  <h3>
+                    {packageTitle(product)} <small>{weight} جم</small>
+                  </h3>
                 </Link>
                 <p>سادة أو محوج · تحميص على مزاجك</p>
                 <div className="package-bottom">
                   <span>
-                    يبدأ من <strong>{money(minPrice)}</strong>
+                    السعر <strong>{money(variant.price)}</strong>
                   </span>
                   <Link className="btn" to={href}>
                     اختار عبوتك <ArrowLeft size={16} />

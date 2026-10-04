@@ -670,3 +670,11 @@
     font-size: 16px;
   }
 }
+
+.storefront .package-copy h3 small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
