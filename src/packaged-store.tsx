@@ -4,14 +4,27 @@ import { money, stock, type Product } from './lib';
 import { packageGroups, packageKey, packageTitle } from './packaged-coffee';
 import './packaged-store.css';
 
-export function PackageCards({ products }: { products: Product[] }) {
+export function PackageCards({
+  products,
+  preview = false,
+}: {
+  products: Product[];
+  preview?: boolean;
+}) {
+  const groups = packageGroups(products).flatMap((group) =>
+    preview
+      ? [...new Set(group.map((p) => p.kind))].map((kind) => group.filter((p) => p.kind === kind))
+      : [group],
+  );
+  let rendered = 0;
   return (
     <div className="package-grid">
-      {packageGroups(products).flatMap((group) => {
+      {groups.flatMap((group) => {
         const weights = [
           ...new Set(group.flatMap((product) => product.variants.map((v) => v.weight))),
         ].sort((a, b) => a - b);
         return weights.map((weight) => {
+          if (preview && rendered++ >= 8) return null;
           const candidates = group.filter((p) => p.variants.some((v) => v.weight === weight));
           const choices = candidates.flatMap((product) =>
             product.variants
@@ -26,10 +39,13 @@ export function PackageCards({ products }: { products: Product[] }) {
           return (
             <article
               className={`package-card ${packageKey(product)}`}
-              key={`${packageKey(product)}-${weight}`}
+              key={`${packageKey(product)}-${preview ? product.kind : 'all'}-${weight}`}
             >
               <Link to={href} className="package-photo">
-                <span className="package-label">{weight} جم</span>
+                <span className="package-label">
+                  {preview ? `${product.kind} · ` : ''}
+                  {weight} جم
+                </span>
                 <img
                   src={product.image}
                   alt={`${packageTitle(product)} — ${weight} جم`}
@@ -39,10 +55,17 @@ export function PackageCards({ products }: { products: Product[] }) {
               <div className="package-copy">
                 <Link to={href}>
                   <h3>
-                    {packageTitle(product)} <small>{weight} جم</small>
+                    {packageTitle(product)}{' '}
+                    <small>
+                      {weight} جم{preview ? ` · ${product.kind}` : ''}
+                    </small>
                   </h3>
                 </Link>
-                <p>سادة أو محوج · تحميص على مزاجك</p>
+                <p>
+                  {preview
+                    ? `${product.kind} · اختار التحميص المناسب ليك`
+                    : 'سادة أو محوج · تحميص على مزاجك'}
+                </p>
                 <div className="package-bottom">
                   <span>
                     السعر <strong>{money(variant.price)}</strong>

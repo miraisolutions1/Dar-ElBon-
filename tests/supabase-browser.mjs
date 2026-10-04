@@ -221,8 +221,24 @@ try {
   );
   assert.equal(save.body.payload.variants[0].price, 20100);
   await page.goto(site);
-  await expect(page.locator('.package-card')).toHaveCount(4);
+  await expect(page.locator('.package-card')).toHaveCount(8);
   await expect(page.locator('.home-featured')).toContainText('حكايتك تبدأ باختيارك');
+  const layout = await page.evaluate(() => {
+    const hero = document.querySelector('.hero').getBoundingClientRect();
+    const header = document.querySelector('.site-header').getBoundingClientRect();
+    const cards = [...document.querySelectorAll('.home-featured .package-card')];
+    return {
+      heroWidth: hero.width,
+      width: innerWidth,
+      bottom: hero.bottom,
+      height: innerHeight,
+      rows: new Set(cards.map((card) => Math.round(card.getBoundingClientRect().top))).size,
+    };
+  });
+  assert.equal(layout.heroWidth, layout.width, 'Hero spans the viewport');
+  assert(Math.abs(layout.bottom - layout.height) < 2, 'Hero fills the space below the header');
+  assert.equal(layout.rows, 2, 'Desktop store preview has two rows');
+  await expect(page.locator('.store-more a')).toHaveAttribute('href', '#/shop');
   await expect(page.locator('.brew-motion')).toHaveCount(0);
   await page.screenshot({ path: '.local/landing-packages-desktop.png', fullPage: false });
   await page.locator('.home-featured').screenshot({ path: '.local/premium-store-desktop.png' });
@@ -259,7 +275,7 @@ try {
   });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(site);
-  await expect(page.locator('.package-card')).toHaveCount(4);
+  await expect(page.locator('.package-card')).toHaveCount(8);
   assert(
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
     'Mobile landing must not overflow',

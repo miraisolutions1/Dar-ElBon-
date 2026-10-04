@@ -388,7 +388,13 @@ export function Home() {
             افتح المتجر <ArrowLeft size={18} />
           </Link>
         </div>
-        <PackageCards products={products} />
+        <PackageCards products={products} preview />
+        <div className="store-more">
+          <p>لسه الحكاية مكملة. شوف كل العبوات واختار قهوتك على مزاجك.</p>
+          <Link className="btn" to="/shop">
+            تصفّح كل المنتجات <ArrowLeft size={18} />
+          </Link>
+        </div>
         <CustomBlendCallout />
       </section>
     ),

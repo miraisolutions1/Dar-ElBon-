@@ -115,9 +115,11 @@
   border-radius: 9px;
 }
 .storefront .hero {
-  width: min(1360px, calc(100% - 48px));
-  height: 640px;
-  border-radius: 18px;
+  width: 100%;
+  height: calc(100svh - 100px);
+  min-height: 600px;
+  margin: 0;
+  border-radius: 0;
 }
 .storefront .hero-copy {
   max-width: 510px;
@@ -461,9 +463,10 @@
     border-radius: 12px;
   }
   .storefront .hero {
-    width: calc(100% - 24px);
-    height: 650px;
-    border-radius: 16px;
+    width: 100%;
+    height: calc(100svh - 88px);
+    min-height: 640px;
+    border-radius: 0;
   }
   .storefront .hero h1 {
     font-size: 40px;
@@ -677,4 +680,117 @@
   font-size: 12px;
   font-weight: 600;
   color: var(--muted);
+}
+
+/* Brand rhythm: cream shop, espresso blend, yellow actions. */
+.storefront .site-footer .developer-credit {
+  color: #ddd4c5;
+  font-size: 13px;
+}
+.storefront .site-footer .developer-credit a,
+.storefront .site-footer .developer-credit strong {
+  color: #ffd200;
+  font-size: 15px;
+  font-weight: 800;
+}
+.storefront .site-footer .developer-credit a {
+  display: inline-block;
+  padding: 4px 6px;
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+.storefront .store-more {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 0;
+  margin-top: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.storefront .store-more p {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+}
+.storefront .store-more .btn,
+.storefront .package-section-heading .text-link {
+  background: #ffd200;
+  color: #251e18;
+  border: 1px solid #ffd200;
+  border-radius: 8px;
+  padding: 12px 20px;
+}
+.storefront .custom-blend-callout {
+  background: #251e18;
+  border-color: #251e18;
+  color: #fff9ed;
+}
+.storefront .custom-blend-callout h3 {
+  color: #fff9ed;
+}
+.storefront .custom-blend-callout p {
+  color: #ded4c4;
+}
+.storefront .custom-blend-callout .eyebrow,
+.storefront .custom-blend-icon {
+  color: #ffd200;
+}
+.storefront .custom-blend-icon {
+  border-color: #ffd20066;
+}
+.storefront .custom-blend-callout .btn {
+  background: #ffd200;
+  color: #251e18;
+  border-color: #ffd200;
+}
+.storefront .home-learn-note {
+  background: #fff0ac;
+  border-color: #ead075;
+}
+.storefront .home-learn-note .text-link {
+  background: #251e18;
+  color: #fff9ed;
+  padding: 12px 20px;
+  border-radius: 8px;
+}
+.storefront .package-bottom .btn:hover,
+.storefront .store-more .btn:hover,
+.storefront .custom-blend-callout .btn:hover {
+  background: #efc400;
+  color: #251e18;
+}
+@media (max-width: 760px) {
+  .storefront .store-more {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+  .storefront .store-more .btn {
+    justify-content: center;
+  }
+}
+
+.storefront .home-quiz-teaser {
+  background: #fff0ac;
+  border: 1px solid #ead075;
+}
+.storefront .home-quiz-teaser h2 {
+  color: #251e18;
+}
+.storefront .home-quiz-teaser p {
+  color: #62513b;
+}
+.storefront .home-quiz-teaser .btn {
+  background: #251e18;
+  color: #fff9ed;
+  border-color: #251e18;
+}
+.storefront .drinks-menu-compact {
+  background: #fffdf9;
+  border-block: 1px solid var(--line);
+}
+.storefront .home-featured .package-label {
+  background: #fff5c7;
+  color: #49391d;
 }
