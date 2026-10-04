@@ -1,3 +1,4 @@
+import { RitualStrip } from './ritual-strip';
 import { PackageCards, CustomBlendCallout } from './packaged-store';
 import { isPackagedCoffee, packageKey, packageTitle } from './packaged-coffee';
 import copy from '../content/site-copy-ar.json';
@@ -499,28 +500,7 @@ export function Home() {
           </div>
         </div>
       </section>
-      <div className="ritual-strip container">
-        <span>
-          <Bean size={21} strokeWidth={1.4} />
-          <span>
-            {copy.ritual[0].lead} <strong>{copy.ritual[0].emphasis}</strong>
-          </span>
-        </span>
-        <i />
-        <span>
-          <SlidersHorizontal size={21} strokeWidth={1.4} />
-          <span>
-            {copy.ritual[1].lead} <strong>{copy.ritual[1].emphasis}</strong>
-          </span>
-        </span>
-        <i />
-        <span>
-          <ShoppingBag size={21} strokeWidth={1.4} />
-          <span>
-            {copy.ritual[2].lead} <strong>{copy.ritual[2].emphasis}</strong>
-          </span>
-        </span>
-      </div>
+      <RitualStrip />
       {[
         'featured',
         ...settings.sections.filter(
