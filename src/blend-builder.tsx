@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Bean, Minus, Plus, Bookmark, RotateCcw } from 'lucide-react';
-import { money } from './lib';
+import { money, useStore, useCart } from './lib';
+import { Link } from 'react-router-dom';
 import {
   blendOrigins,
   calculateBlend,
@@ -15,10 +16,12 @@ function BlendAmount({
   name,
   grams,
   onChange,
+  max = 1000,
 }: {
   name: string;
   grams: number;
   onChange: (grams: number) => void;
+  max?: number;
 }) {
   const [draft, setDraft] = useState(String(grams));
   useEffect(() => setDraft(String(grams)), [grams]);
@@ -27,7 +30,7 @@ function BlendAmount({
       <button
         type="button"
         aria-label={`تقليل كمية البن ${name} 50 جم`}
-        disabled={!grams}
+        disabled={!grams || !max}
         onClick={() => onChange(grams - 50)}
       >
         <Minus size={18} />
@@ -37,9 +40,10 @@ function BlendAmount({
         <input
           type="number"
           min="0"
-          max="1000"
+          max={max}
           step="50"
           inputMode="numeric"
+          disabled={!max}
           value={draft}
           onChange={(event) => {
             const value = event.target.value;
@@ -49,13 +53,13 @@ function BlendAmount({
               value !== '' &&
               Number.isFinite(parsed) &&
               parsed >= 0 &&
-              parsed <= 1000 &&
+              parsed <= max &&
               parsed % 50 === 0
             )
               onChange(parsed);
           }}
           onBlur={() => {
-            const value = normalizeBlendGrams(Number(draft));
+            const value = Math.min(max, normalizeBlendGrams(Number(draft)));
             setDraft(String(value));
             onChange(value);
           }}
@@ -65,7 +69,7 @@ function BlendAmount({
       <button
         type="button"
         aria-label={`زيادة كمية البن ${name} 50 جم`}
-        disabled={grams >= 1000}
+        disabled={grams >= max}
         onClick={() => onChange(grams + 50)}
       >
         <Plus size={18} />
@@ -77,46 +81,89 @@ function BlendAmount({
 export function BlendBuilder({ standalone = false }: { standalone?: boolean }) {
   const [amounts, setAmounts] = useState<BlendAmounts>({ ...initialBlend });
   const [message, setMessage] = useState('');
-  const total = calculateBlend(amounts);
+  const [added, setAdded] = useState(false);
+  const [grind, setGrind] = useState('تركي ناعم');
+  const { products, settings } = useStore();
+  const cart = useCart();
+  const catalog = blendOrigins.map((origin) => {
+    const product = products.find(
+      (product) =>
+        product.slug === origin.slug && product.active && product.kind === 'حبوب للتوليف',
+    );
+    const variant = product?.variants.find((variant) => variant.weight === 50 && variant.price > 0);
+    const max =
+      product && variant && product.stockMode === 'grams'
+        ? Math.min(1000, Math.floor(product.stockGrams / 50) * 50)
+        : 0;
+    return { origin, product, max, pricePer100: variant ? variant.price * 2 : 0 };
+  });
+  const effectiveAmounts = Object.fromEntries(
+    catalog.map((item) => [item.origin.id, Math.min(item.max, amounts[item.origin.id] || 0)]),
+  );
+  const prices = Object.fromEntries(catalog.map((item) => [item.origin.id, item.pricePer100]));
+  const total = calculateBlend(effectiveAmounts, prices);
+  const selectedCatalog = catalog.filter((item) => effectiveAmounts[item.origin.id] > 0);
+  const grinds = ['تركي ناعم', 'إسبريسو ناعم', 'فلتر متوسط', 'حبوب كاملة'].filter((grind) =>
+    selectedCatalog.every((item) => item.product?.grinds.includes(grind)),
+  );
+  const canAdd = total.weight > 0 && total.weight <= 3000 && grinds.includes(grind);
+
   const Heading = standalone ? 'h1' : 'h2';
   function update(id: keyof BlendAmounts, grams: number) {
     setAmounts((current) => ({ ...current, [id]: normalizeBlendGrams(grams) }));
     setMessage('');
+    setAdded(false);
   }
   return (
     <section className="blend-builder" aria-labelledby="blend-builder-title">
       <header className="bb-heading">
         <span className="bb-eyebrow">تجربة توليفة على ذوقك</span>
         <Heading id="blend-builder-title">كوّن توليفتك</Heading>
-        <p>
-          زوّد وقلّل من البرازيلي والكولومبي والإثيوبي، وشوف نسب توليفتك ووزنها وسعرها التوضيحي
-          فورًا.
-        </p>
+        <p>اختار من ٨ أنواع، وظبّط نسب توليفتك بخطوات ٥٠ جم. اختار الطحنة وأضفها للسلة.</p>
       </header>
       <div className="bb-preview-note">
-        حاسبة معاينة فقط · الأسعار والمنشأ أمثلة للتجربة، وليست قائمة منتجات أو أسعار دار البن.
-        الوصفة لا تُضاف للسلة ولا تُسجّل كطلب.
+        {settings.mode === 'preview'
+          ? 'المتجر في وضع المعاينة · بيانات الأنواع والأسعار والطلبات تجريبية لحين اعتمادها.'
+          : 'السعر محسوب من أسعار الأنواع المتاحة، ويتأكد عند تسجيل الطلب.'}
       </div>
       <div className="bb-origin-grid">
         {total.items.map((origin) => (
           <article className="bb-origin" key={origin.id}>
+            <div
+              className="bb-beans-photo"
+              role="img"
+              aria-label={`تصور توضيحي لحبوب بن ${origin.name}`}
+              style={{
+                backgroundImage: 'url(/images/blend-beans.webp)',
+                backgroundPositionX: `${((origin.imageIndex % 4) * 100) / 3}%`,
+                backgroundPositionY: origin.imageIndex < 4 ? '0%' : '100%',
+              }}
+            />
             <div className="bb-origin-top">
               <Bean size={25} style={{ color: origin.color }} />
-              <span>{money(origin.pricePer100)} / 100 جم</span>
+              <span>
+                {catalog.find((item) => item.origin.id === origin.id)?.max
+                  ? `${money(origin.pricePer100)} / 100 جم`
+                  : 'غير متاح حاليًا'}
+              </span>
             </div>
             <h3>بن {origin.name}</h3>
             <p>{origin.note}</p>
             <div className="bb-traits">
               <span>القوام: {origin.body}</span>
               <span>الحموضة: {origin.acidity}</span>
+              <span>
+                {origin.specie} · تحميص توضيحي {origin.sampleRoast}
+              </span>
             </div>
             <BlendAmount
               name={origin.name}
               grams={origin.grams}
+              max={catalog.find((item) => item.origin.id === origin.id)?.max || 0}
               onChange={(grams) => update(origin.id, grams)}
             />
             <div className="bb-origin-total">
-              <span>قيمة الكمية التجريبية</span>
+              <span>قيمة الكمية</span>
               <strong>{money(origin.price)}</strong>
             </div>
           </article>
@@ -125,7 +172,7 @@ export function BlendBuilder({ standalone = false }: { standalone?: boolean }) {
       <div className="bb-summary">
         <div className="bb-summary-heading">
           <h3>توليفتك بالأرقام</h3>
-          <span>الكمية بخطوات 50 جم، حتى 1000 جم لكل نوع</span>
+          <span>خطوات ٥٠ جم · حتى ١٠٠٠ جم للنوع و٣٠٠٠ جم للتوليفة</span>
         </div>
         <div className="bb-totals" aria-live="polite" aria-atomic="true">
           <div>
@@ -135,7 +182,7 @@ export function BlendBuilder({ standalone = false }: { standalone?: boolean }) {
             </strong>
           </div>
           <div>
-            <span>السعر التوضيحي</span>
+            <span>سعر التوليفة</span>
             <strong>{money(total.price)}</strong>
           </div>
         </div>
@@ -164,7 +211,50 @@ export function BlendBuilder({ standalone = false }: { standalone?: boolean }) {
         ) : (
           <p className="bb-empty">توليفتك لسه فاضية. ضيف 50 جم من أي نوع وابدأ التجربة.</p>
         )}
+        <label className="bb-grind-field">
+          اختار طحنة التوليفة
+          <select
+            value={grind}
+            onChange={(event) => {
+              setGrind(event.target.value);
+              setAdded(false);
+            }}
+          >
+            {['تركي ناعم', 'إسبريسو ناعم', 'فلتر متوسط', 'حبوب كاملة'].map((value) => (
+              <option key={value} value={value} disabled={!grinds.includes(value)}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </label>
+        {total.weight > 3000 && (
+          <p className="bb-limit-error" role="alert">
+            الحد الأقصى للتوليفة ٣٠٠٠ جم. قلّل الكمية قبل إضافتها للسلة.
+          </p>
+        )}
         <div className="bb-actions">
+          <button
+            className="bb-save bb-cart-add"
+            disabled={!canAdd}
+            onClick={() => {
+              const components = selectedCatalog.flatMap((item) =>
+                item.product
+                  ? [{ productId: item.product.id, grams: effectiveAmounts[item.origin.id] }]
+                  : [],
+              );
+              if (!canAdd || !components.length) return;
+              cart.add({ type: 'blend', components, grind, quantity: 1 });
+              setAdded(true);
+              setMessage('اتضافت توليفتك للسلة. راجعها وكمّل الطلب.');
+            }}
+          >
+            أضف التوليفة للسلة
+          </button>
+          {added && (
+            <Link className="bb-checkout-link" to="/cart">
+              كمّل الطلب
+            </Link>
+          )}
           <button
             className="bb-save"
             disabled={!total.weight}
@@ -172,7 +262,7 @@ export function BlendBuilder({ standalone = false }: { standalone?: boolean }) {
               try {
                 localStorage.setItem(
                   'dar-coffee-preview-blend',
-                  JSON.stringify({ amounts, savedAt: Date.now(), preview: true }),
+                  JSON.stringify({ amounts: effectiveAmounts, savedAt: Date.now(), preview: true }),
                 );
                 setMessage('اتحفظت وصفة المعاينة على جهازك. ده حفظ للوصفة فقط، مش طلب شراء.');
               } catch {
@@ -208,6 +298,7 @@ export function BlendBuilder({ standalone = false }: { standalone?: boolean }) {
             className="bb-reset"
             onClick={() => {
               setAmounts({ ...initialBlend });
+              setAdded(false);
               setMessage('');
             }}
           >
@@ -221,6 +312,10 @@ export function BlendBuilder({ standalone = false }: { standalone?: boolean }) {
       </div>
       <aside className="bb-taste-notes">
         <h3>إزاي نفهم الطعم؟</h3>
+        <p>
+          صور الحبوب توضيحية. اختلاف لون الحبة مرتبط بالتحميص والمعالجة، ومش دليل على بلد المنشأ
+          وحده.
+        </p>
         <p>
           <strong>القوام</strong> هو إحساس القهوة خفيفة أو تقيلة في الفم. <strong>الحموضة</strong>{' '}
           وصف لطعم فاكهي أو منعش، مش معناها إن البن فاسد.

@@ -581,6 +581,9 @@ export function OrderDetail() {
                 <p>
                   {i.weight} جم · {i.grind} · عدد {i.quantity}
                 </p>
+                {i.type === 'blend' && (
+                  <small>{i.components.map((c) => `${c.name}: ${c.grams} جم`).join(' · ')}</small>
+                )}
               </div>
               <strong>{money(i.total)}</strong>
             </div>

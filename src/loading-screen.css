@@ -1,0 +1,108 @@
+.dar-loading {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: 30px 20px;
+  background: #faf7f0;
+  color: #302218;
+  font-family: 'Cairo Variable', Tahoma, sans-serif;
+  text-align: center;
+  direction: rtl;
+}
+.dar-loading-card {
+  width: min(100%, 420px);
+}
+.dar-loading-logo {
+  display: block;
+  width: 108px;
+  height: 108px;
+  object-fit: contain;
+  margin: 0 auto 19px;
+}
+.dar-loading-brand {
+  font-size: 26px;
+  font-weight: 850;
+  line-height: 1.65;
+  margin: 0;
+}
+.dar-loading-tagline {
+  font-size: 14px;
+  font-weight: 600;
+  color: #946c22;
+  margin-top: 4px;
+}
+.dar-loading-progress {
+  display: block;
+  position: relative;
+  width: 136px;
+  height: 5px;
+  margin: 30px auto 17px;
+  border-radius: 5px;
+  background: #eee1bf;
+  overflow: hidden;
+}
+.dar-loading-progress i {
+  display: block;
+  width: 56px;
+  height: 100%;
+  border-radius: inherit;
+  background: #ffd200;
+  animation: dar-loading-slide 1.5s ease-in-out infinite alternate;
+}
+.dar-loading-message {
+  font-size: 13px;
+  color: #75634f;
+}
+.dar-loading-error {
+  margin-top: 29px;
+  padding-top: 25px;
+  border-top: 1px solid #e7dbc6;
+}
+.dar-loading-error h1 {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.7;
+  margin-bottom: 12px;
+}
+.dar-loading-error p {
+  font-size: 14px;
+  line-height: 1.9;
+  color: #75634f;
+  overflow-wrap: anywhere;
+}
+.dar-loading-error button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 11px 23px;
+  margin-top: 22px;
+  border: 1px solid #e5bf0e;
+  border-radius: 9px;
+  background: #ffd200;
+  color: #302218;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.dar-loading-error button:focus-visible {
+  outline: 3px solid #916920;
+  outline-offset: 4px;
+}
+@keyframes dar-loading-slide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-80px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dar-loading-progress i {
+    animation: none;
+    width: 100%;
+  }
+}

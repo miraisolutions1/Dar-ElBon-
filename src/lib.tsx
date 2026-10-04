@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { LoadingScreen } from './loading-screen';
 
 export type Variant = { id?: string; weight: number; price: number; stock: number };
 export type Product = {
@@ -39,7 +40,30 @@ export type Settings = {
   branches: { name: string; address: string; main: boolean; enabled?: boolean }[];
   shippingZones: { id: string; name: string; fee: number; eta: string; enabled: boolean }[];
 };
-export type CartLine = { productId: string; variantId: string; grind: string; quantity: number };
+export type ProductCartLine = {
+  type?: 'product';
+  productId: string;
+  variantId: string;
+  grind: string;
+  quantity: number;
+};
+export type BlendComponent = { productId: string; grams: number };
+export type BlendCartLine = {
+  type: 'blend';
+  components: BlendComponent[];
+  grind: string;
+  quantity: number;
+};
+export type CartLine = ProductCartLine | BlendCartLine;
+export type BlendOrderComponent = BlendComponent & {
+  name: string;
+  pricePer50: number;
+  unitPrice: number;
+  stockMode: 'grams';
+};
+export type OrderItem = (
+  ProductCartLine | (Omit<BlendCartLine, 'components'> & { components: BlendOrderComponent[] })
+) & { name: string; image: string; weight: number; price: number; total: number };
 export type Order = {
   id: number;
   token: string;
@@ -50,13 +74,7 @@ export type Order = {
   fulfillment?: 'delivery' | 'pickup';
   pickupBranch?: { name: string; address: string } | null;
   customer: { name: string; phone: string; city: string; address: string; notes: string };
-  items: (CartLine & {
-    name: string;
-    image: string;
-    weight: number;
-    price: number;
-    total: number;
-  })[];
+  items: OrderItem[];
   zone: string;
   eta: string;
   subtotal: number;
@@ -128,7 +146,49 @@ export function startingVariant(product: Product) {
     (a, b) => a.price - b.price,
   )[0];
 }
-export const lineKey = (line: CartLine) => `${line.productId}/${line.variantId}/${line.grind}`;
+export const lineKey = (line: CartLine) =>
+  line.type === 'blend'
+    ? `blend/${JSON.stringify(
+        [...line.components]
+          .sort((a, b) => a.productId.localeCompare(b.productId))
+          .map(({ productId, grams }) => [productId, grams]),
+      )}/${line.grind}`
+    : `${line.productId}/${line.variantId}/${line.grind}`;
+
+function validCartLine(value: unknown): value is CartLine {
+  if (!value || typeof value !== 'object') return false;
+  const line = value as Record<string, unknown>;
+  if (
+    typeof line.grind !== 'string' ||
+    line.grind.length > 100 ||
+    !Number.isInteger(line.quantity) ||
+    Number(line.quantity) < 1 ||
+    Number(line.quantity) > 30
+  )
+    return false;
+  const validId = (id: unknown) => typeof id === 'string' && id.length > 0 && id.length <= 100;
+  if (line.type !== 'blend')
+    return (
+      (line.type === undefined || line.type === 'product') &&
+      validId(line.productId) &&
+      validId(line.variantId)
+    );
+  if (!Array.isArray(line.components) || !line.components.length || line.components.length > 8)
+    return false;
+  const ids = new Set<string>();
+  let total = 0;
+  for (const value of line.components) {
+    if (!value || typeof value !== 'object') return false;
+    const component = value as Record<string, unknown>;
+    if (!validId(component.productId) || !Number.isInteger(component.grams)) return false;
+    const grams = Number(component.grams);
+    if (grams < 50 || grams > 1000 || grams % 50 !== 0 || ids.has(component.productId as string))
+      return false;
+    ids.add(component.productId as string);
+    total += grams;
+  }
+  return total <= 3000;
+}
 
 const StoreContext = createContext<{
   settings: Settings;
@@ -151,23 +211,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh().catch(() => {});
   }, [refresh]);
-  if (!value)
-    return (
-      <main className="loading-page">
-        <div className="brand-mark">د</div>
-        <h1>دار البن البرازيلي</h1>
-        {error ? (
-          <>
-            <p role="alert">{error}</p>
-            <button className="btn" onClick={() => void refresh().catch(() => {})}>
-              حاول مرة أخرى
-            </button>
-          </>
-        ) : (
-          <p>بنجهّز لك القهوة…</p>
-        )}
-      </main>
-    );
+  if (!value) return <LoadingScreen error={error} retry={() => void refresh().catch(() => {})} />;
   return <StoreContext.Provider value={{ ...value, refresh }}>{children}</StoreContext.Provider>;
 }
 export function useStore() {
@@ -185,20 +229,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>(() => {
     try {
       const data = JSON.parse(localStorage.getItem('dar-cart-v2') || '[]');
-      return Array.isArray(data)
-        ? data
-            .filter(
-              (l) =>
-                l &&
-                typeof l.productId === 'string' &&
-                typeof l.variantId === 'string' &&
-                typeof l.grind === 'string' &&
-                Number.isInteger(l.quantity) &&
-                l.quantity > 0 &&
-                l.quantity <= 30,
-            )
-            .slice(0, 30)
-        : [];
+      return Array.isArray(data) ? data.filter(validCartLine).slice(0, 30) : [];
     } catch {
       return [];
     }

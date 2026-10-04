@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { once } from 'node:events';
-import { openDatabase, getSettings, orderView } from '../server/db.mjs';
+import { openDatabase, getSettings, orderView, seedBlendIngredients } from '../server/db.mjs';
 import { createAdmin } from '../server/auth.mjs';
 import { createApp } from '../server/app.mjs';
 
@@ -49,7 +49,7 @@ async function fixture(t, { rateLimits = false } = {}) {
   });
   assert.equal(login.status, 200);
   const catalog = (await request('/store')).data;
-  const product = catalog.products[0];
+  const product = catalog.products.find((product) => product.slug === 'dar-blend-mahawag');
   const order = () => ({
     idempotencyKey: randomUUID(),
     customer: {
@@ -151,6 +151,141 @@ test('branch pickup validates selection, charges no delivery fee and preserves b
     ).status,
     400,
   );
+});
+
+test('custom blend uses canonical ingredient prices, deducts shared gram stock and restores once', async (t) => {
+  const f = await fixture(t);
+  const catalog = (await f.request('/store')).data.products;
+  const brazil = catalog.find((product) => product.slug === 'blend-origin-brazil');
+  const colombia = catalog.find((product) => product.slug === 'blend-origin-colombia');
+  assert.equal(catalog.filter((product) => product.kind === 'حبوب للتوليف').length, 8);
+  assert.equal(seedBlendIngredients(f.db).created, 0);
+  const line = {
+    type: 'blend',
+    components: [
+      { productId: brazil.id, grams: 150 },
+      { productId: colombia.id, grams: 100 },
+    ],
+    grind: 'تركي ناعم',
+    quantity: 2,
+    price: 1,
+    total: 2,
+  };
+  const input = { ...f.order(), items: [line], expectedTotal: 44000 };
+  const stock = (id) =>
+    f.db.prepare('SELECT stock_grams FROM products WHERE id=?').get(id).stock_grams;
+  const result = await f.request('/orders', { method: 'POST', body: input });
+  assert.equal(result.status, 201);
+  assert.equal(result.data.total, 44000);
+  assert.equal(result.data.items[0].price, 22000);
+  assert.equal(result.data.items[0].weight, 250);
+  assert.deepEqual(
+    result.data.items[0].components.map((component) => [
+      component.grams,
+      component.pricePer50,
+      component.unitPrice,
+    ]),
+    [
+      [150, 4000, 12000],
+      [100, 5000, 10000],
+    ],
+  );
+  assert.equal(stock(brazil.id), 4700);
+  assert.equal(stock(colombia.id), 4800);
+  assert.equal((await f.request('/orders', { method: 'POST', body: input })).status, 200);
+  assert.equal(stock(brazil.id), 4700);
+  f.db.prepare('UPDATE variants SET price=? WHERE product_id=? AND weight=50').run(6000, brazil.id);
+  const stale = await f.request('/orders', {
+    method: 'POST',
+    body: { ...input, idempotencyKey: randomUUID() },
+  });
+  assert.equal(stale.status, 409);
+  assert.equal(stock(brazil.id), 4700);
+  assert.equal(stock(colombia.id), 4800);
+  assert.equal((await f.request(`/orders/${result.data.token}`)).data.items[0].price, 22000);
+  const id = f.db.prepare('SELECT id FROM orders WHERE token=?').get(result.data.token).id;
+  assert.equal(
+    (
+      await f.request(`/admin/orders/${id}`, {
+        method: 'PATCH',
+        cookie: f.cookie,
+        body: { status: 'cancelled' },
+      })
+    ).status,
+    200,
+  );
+  assert.equal(stock(brazil.id), 5000);
+  assert.equal(stock(colombia.id), 5000);
+  assert.equal(
+    (
+      await f.request(`/admin/orders/${id}`, {
+        method: 'PATCH',
+        cookie: f.cookie,
+        body: { status: 'cancelled' },
+      })
+    ).status,
+    200,
+  );
+  assert.equal(stock(brazil.id), 5000);
+  f.db.prepare('UPDATE products SET name=? WHERE id=?').run('اسم إداري محفوظ', brazil.id);
+  assert.equal(
+    seedBlendIngredients(f.db).products.find((product) => product.id === brazil.id).name,
+    'اسم إداري محفوظ',
+  );
+});
+
+test('custom blends reject duplicate, malformed or unavailable ingredients and mixed cart overselling', async (t) => {
+  const f = await fixture(t);
+  const catalog = (await f.request('/store')).data.products;
+  const brazil = catalog.find((product) => product.slug === 'blend-origin-brazil');
+  const line = {
+    type: 'blend',
+    components: [{ productId: brazil.id, grams: 100 }],
+    grind: 'تركي ناعم',
+    quantity: 1,
+  };
+  const request = (items) =>
+    f.request('/orders', { method: 'POST', body: { ...f.order(), items } });
+  for (const components of [
+    [],
+    [{ productId: brazil.id, grams: 0 }],
+    [{ productId: brazil.id, grams: 51 }],
+    [{ productId: brazil.id, grams: 1050 }],
+    [
+      { productId: brazil.id, grams: 100 },
+      { productId: brazil.id, grams: 50 },
+    ],
+  ])
+    assert.equal((await request([{ ...line, components }])).status, 400);
+  const oversize = catalog
+    .filter((product) => product.kind === 'حبوب للتوليف')
+    .slice(0, 4)
+    .map((product) => ({ productId: product.id, grams: 1000 }));
+  assert.equal((await request([{ ...line, components: oversize }])).status, 400);
+  assert.equal((await request([{ ...line, grind: 'طحنة غير متاحة' }])).status, 400);
+  assert.equal(
+    (await request([{ ...line, components: [{ productId: f.product.id, grams: 100 }] }])).status,
+    409,
+  );
+  f.db.prepare('UPDATE products SET stock_grams=100 WHERE id=?').run(brazil.id);
+  const normal = {
+    productId: brazil.id,
+    variantId: brazil.variants[0].id,
+    grind: 'تركي ناعم',
+    quantity: 1,
+  };
+  assert.equal((await request([normal, line])).status, 409);
+  assert.equal(
+    f.db.prepare('SELECT stock_grams FROM products WHERE id=?').get(brazil.id).stock_grams,
+    100,
+  );
+  assert.equal((await request([line, { ...line, grind: 'حبوب كاملة' }])).status, 409);
+  assert.equal(
+    f.db.prepare('SELECT stock_grams FROM products WHERE id=?').get(brazil.id).stock_grams,
+    100,
+  );
+  f.db.prepare('UPDATE products SET active=0 WHERE id=?').run(brazil.id);
+  assert.equal((await request([line])).status, 409);
 });
 
 test('legacy delivery input and old order database migrate with delivery fulfillment', async (t) => {
@@ -365,7 +500,9 @@ test('cancellation restores stock once, restricts transitions, and preserves imm
     f.db.prepare('SELECT stock FROM variants WHERE id=?').get(f.product.variants[0].id).stock,
     20,
   );
-  const current = (await f.request('/admin/products', { cookie: f.cookie })).data[0];
+  const current = (await f.request('/admin/products', { cookie: f.cookie })).data.find(
+    (product) => product.id === f.product.id,
+  );
   const edited = {
     ...current,
     variants: current.variants.map((v) => ({ ...v, price: 50000, stock: 20 })),
@@ -546,7 +683,12 @@ test('live mode requires actual configuration, canonical shipping fees and no de
       await f.request(`/admin/products/${f.product.id}`, {
         method: 'PUT',
         cookie: f.cookie,
-        body: { ...(await f.request('/admin/products', { cookie: f.cookie })).data[0], demo: true },
+        body: {
+          ...(await f.request('/admin/products', { cookie: f.cookie })).data.find(
+            (product) => product.id === f.product.id,
+          ),
+          demo: true,
+        },
       })
     ).status,
     400,
@@ -593,7 +735,9 @@ test('product edit preserves variants used by old orders; users and audit are pe
   assert.equal(response.status, 201);
   const order = await f.request('/orders', { method: 'POST', body: f.order() });
   assert.equal(order.status, 201);
-  const current = (await f.request('/admin/products', { cookie: f.cookie })).data[0];
+  const current = (await f.request('/admin/products', { cookie: f.cookie })).data.find(
+    (product) => product.id === f.product.id,
+  );
   const edited = { ...current, variants: [current.variants[1]] };
   assert.equal(
     (
@@ -605,7 +749,11 @@ test('product edit preserves variants used by old orders; users and audit are pe
     ).status,
     200,
   );
-  assert.equal((await f.request('/store')).data.products[0].variants.length, 1);
+  assert.equal(
+    (await f.request('/store')).data.products.find((product) => product.id === f.product.id)
+      .variants.length,
+    1,
+  );
   const publicOrder = await f.request('/orders/' + order.data.token);
   assert.equal(publicOrder.data.items[0].weight, 250);
   const audit = await f.request('/admin/audit', { cookie: f.cookie });

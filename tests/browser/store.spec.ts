@@ -10,7 +10,7 @@ test('desktop purchase persists, appears in admin, and follows fulfillment updat
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /الحكاية/, level: 1 })).toBeVisible();
   await page.screenshot({ path: '.local/screenshots/home-desktop.png', fullPage: true });
-  await page.getByRole('link', { name: 'اختار بنّك', exact: true }).click();
+  await page.getByRole('link', { name: 'اختار قهوتك', exact: true }).click();
   await expect(page).toHaveURL(/\/shop$/);
   await page.getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي', exact: true }).click();
   await page.getByRole('button', { name: 'أضف للسلة', exact: true }).click();
@@ -58,10 +58,11 @@ test('mobile browsing, filters and cart remain usable without horizontal overflo
   await checkOverflow();
   await page.screenshot({ path: '.local/screenshots/home-mobile.png', fullPage: true });
   await page.getByRole('button', { name: 'فتح القائمة' }).click();
-  await page.getByRole('link', { name: 'بنّك للبيت', exact: true }).click();
+  await page.getByRole('link', { name: 'المتجر', exact: true }).click();
   await page.getByLabel('طريقة التحضير', { exact: true }).selectOption('فلتر');
-  await expect(page.getByRole('heading', { name: 'لسه ما لقيناش التوليفة دي' })).toBeVisible();
-  await page.getByRole('button', { name: 'عرض كل القهوة' }).click();
+  await expect(page.locator('.product-grid .product-card')).toHaveCount(8);
+  await expect(page.getByRole('link', { name: /^اختيار (بن )?برازيلي$/ })).toBeVisible();
+  await page.getByLabel('طريقة التحضير', { exact: true }).selectOption('');
   await page.getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي', exact: true }).click();
   await page.getByRole('button', { name: '500 جم', exact: true }).click();
   await page.getByLabel('الطحنة المناسبة').selectOption('حبوب كاملة');
@@ -159,12 +160,12 @@ test('header search and mobile navigation keep the active panel consistent', asy
   );
 });
 
-test('home separates branch visits from buying beans and explains methods without stock', async ({
+test('home separates branch visits from buying beans and opens the beans for a preparation method', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByRole('link', { name: 'اعرف فروعنا', exact: true }).click();
+  await page.locator('.hero-secondary').click();
   await expect(page).toHaveURL(/\/branches$/);
   await expect(page.locator('.branch-card')).toHaveCount(4);
   await page.goto('/');
@@ -172,13 +173,9 @@ test('home separates branch visits from buying beans and explains methods withou
     .locator('.brew-card')
     .filter({ has: page.getByRole('heading', { name: 'إسبريسو', exact: true }) })
     .click();
-  await expect(page).toHaveURL(/\/guide\?brew=/);
-  await expect(page.getByRole('button', { name: 'إسبريسو', exact: true })).toHaveClass(/selected/);
-  await expect(page.getByRole('heading', { name: 'فنجان إسبريسو على طريقتك' })).toBeVisible();
-  await page.getByRole('link', { name: 'شوف البن المتاح', exact: true }).click();
-  await expect(
-    page.getByRole('link', { name: 'اختيار توليفة دار البن البرازيلي', exact: true }),
-  ).toBeVisible();
+  await expect(page).toHaveURL(/\/shop\?brew=/);
+  await expect(page.getByLabel('طريقة التحضير', { exact: true })).toHaveValue('إسبريسو');
+  await expect(page.getByRole('link', { name: /^اختيار (بن )?برازيلي$/ })).toBeVisible();
 });
 
 test('coffee quiz matches available beans, preserves answers, and opens the recommended weight', async ({
@@ -211,7 +208,7 @@ test('unavailable quiz method has no false recommendation and preparation cards 
   await page.goto('/quiz');
   await page.getByRole('radio', { name: /ماكينة إسبريسو/ }).check();
   await page.getByRole('button', { name: 'التالي' }).click();
-  await page.getByRole('radio', { name: /لسه بكتشف/ }).check();
+  await page.getByRole('radio', { name: /^سادة/ }).check();
   await page.getByRole('button', { name: 'التالي' }).click();
   await page.getByRole('radio', { name: /بجرّب التوليفة/ }).check();
   await page.getByRole('button', { name: 'شوف الترشيح' }).click();
@@ -227,8 +224,8 @@ test('unavailable quiz method has no false recommendation and preparation cards 
   await expect(recipe.getByRole('list')).toHaveCount(2);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.goto('/branches');
-  await expect(page.locator('.branch-drink-card')).toHaveCount(3);
-  await expect(page.locator('.branch-drink-card .product-select')).toHaveCount(0);
+  await expect(page.locator('.drinks-menu-card')).toHaveCount(8);
+  await expect(page.locator('.drinks-menu-card .product-select')).toHaveCount(0);
 });
 
 test('quiz groups the question, selected answer, and stable navigation on mobile', async ({
@@ -264,18 +261,27 @@ test('blend calculator updates weight, price, shares, and saves a preview withou
   await expect(quantity('إثيوبي')).toHaveValue('50');
   await expect(page.locator('.bb-totals')).toContainText('300');
   await expect(page.locator('.bb-totals')).toContainText('٢٨٠');
-  await page.getByRole('button', { name: 'احفظ وصفة المعاينة' }).click();
+  await page.getByRole('button', { name: /^احفظ/ }).click();
   await expect(page.getByRole('status')).toContainText('اتحفظت');
   const recipe = await page.evaluate(() =>
     JSON.parse(localStorage.getItem('dar-coffee-preview-blend')!),
   );
-  expect(recipe.amounts).toEqual({ brazil: 150, colombia: 100, ethiopia: 50 });
+  expect(recipe.amounts).toEqual({
+    brazil: 150,
+    colombia: 100,
+    ethiopia: 50,
+    guatemala: 0,
+    kenya: 0,
+    indonesia: 0,
+    yemen: 0,
+    india: 0,
+  });
   await page.reload();
   await page.getByRole('button', { name: 'حمّل الوصفة المحفوظة' }).click();
   await expect(quantity('إثيوبي')).toHaveValue('50');
   for (const name of ['برازيلي', 'كولومبي', 'إثيوبي']) await quantity(name).fill('0');
   await quantity('إثيوبي').blur();
-  await expect(page.getByRole('button', { name: 'احفظ وصفة المعاينة' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: /^احفظ/ })).toBeDisabled();
   await expect(page.locator('.bb-empty')).toBeVisible();
   await page.setViewportSize({ width: 320, height: 800 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -314,4 +320,86 @@ test('hero motion can be paused and respects the reduced-motion preference', asy
   await expect(page.getByRole('button', { name: 'تشغيل حركة الصورة' })).toBeVisible();
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(page.locator('.hero-motion')).toHaveCount(0);
+});
+
+test('custom blend survives a cart reload and stores every ingredient in the pickup order and admin', async ({
+  page,
+}) => {
+  await page.goto('/blend');
+  await expect(page.locator('.bb-origin')).toHaveCount(8);
+  await expect(page.getByRole('spinbutton', { name: 'كمية برازيلي بالجرام' })).toHaveValue('150');
+  await expect(page.getByRole('spinbutton', { name: 'كمية كولومبي بالجرام' })).toHaveValue('100');
+  await page.getByRole('button', { name: 'زيادة كمية البن إثيوبي 50 جم' }).click();
+  await page.getByRole('button', { name: 'أضف التوليفة للسلة', exact: true }).click();
+  await page.getByRole('link', { name: 'كمّل الطلب', exact: true }).click();
+  await expect(page).toHaveURL(/\/cart$/);
+  await page.reload();
+  const cartItem = page.locator('.cart-item');
+  await expect(cartItem.getByRole('heading', { name: 'توليفتك الخاصة' })).toBeVisible();
+  await expect(cartItem).toContainText('300 جم');
+  for (const ingredient of ['برازيلي 150 جم', 'كولومبي 100 جم', 'إثيوبي 50 جم'])
+    await expect(cartItem).toContainText(ingredient);
+  await expect(cartItem).toContainText('٢٨٠');
+  await page.getByRole('link', { name: 'كمّل الطلب', exact: true }).click();
+  await page.getByRole('radio', { name: 'استلام من الفرع', exact: true }).check();
+  await page.getByLabel('الاسم بالكامل').fill('عميل التوليفة الخاصة');
+  await page.getByLabel('رقم الموبايل').fill('01012345678');
+  await page.getByLabel('فرع الاستلام').selectOption('2');
+  await page.getByRole('button', { name: 'تأكيد الطلب التجريبي' }).click();
+  await expect(page).toHaveURL(/\/order\/[a-f0-9]{64}$/);
+  const orderUrl = page.url();
+  await expect(page.locator('.pickup-confirmation')).toContainText('المقطم');
+  const orderLine = page.locator('.checkout-line').filter({ hasText: 'توليفتك الخاصة' });
+  for (const ingredient of ['برازيلي 150 جم', 'كولومبي 100 جم', 'إثيوبي 50 جم'])
+    await expect(orderLine).toContainText(ingredient);
+  const reference = await page.locator('.order-success strong').textContent();
+  await page.reload();
+  await expect(page).toHaveURL(orderUrl);
+  await expect(orderLine).toContainText('300 جم');
+  await page.goto('/admin/login');
+  await page.getByLabel('اسم الدخول').fill('browser.tester');
+  await page.getByLabel('كلمة المرور', { exact: true }).fill('Browser-test-only-3948!');
+  await page.getByRole('button', { name: 'دخول لوحة الإدارة' }).click();
+  await page.getByRole('link', { name: reference!.trim(), exact: true }).click();
+  await expect(page.getByRole('heading', { name: /الاستلام من فرع.*المقطم/ })).toBeVisible();
+  const adminItem = page.locator('.order-item').filter({ hasText: 'توليفتك الخاصة' });
+  for (const ingredient of ['برازيلي: 150 جم', 'كولومبي: 100 جم', 'إثيوبي: 50 جم'])
+    await expect(adminItem).toContainText(ingredient);
+  await expect(adminItem).toContainText('٢٨٠');
+});
+
+test('homepage leads with the store, credits link to Mirai, and menu filters hot and cold drinks', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  const firstContentSection = await page.locator('.hero').evaluate((hero) => {
+    let element = hero.nextElementSibling;
+    while (element) {
+      const section = element.matches('section') ? element : element.querySelector('section');
+      if (section) return section.className;
+      element = element.nextElementSibling;
+    }
+    return '';
+  });
+  expect(firstContentSection).toContain('home-featured');
+  await expect(page.locator('.home-featured h2')).toContainText('متجر دار البن');
+  await expect(page.locator('.developer-credit a')).toHaveAttribute(
+    'href',
+    'https://miraisolutions.net/',
+  );
+  await expect(page.getByText('بنّك للبيت', { exact: true })).toHaveCount(0);
+  await page.goto('/menu');
+  await expect(page.locator('.drinks-menu-card')).toHaveCount(8);
+  await page.getByRole('button', { name: 'حاجة سخنة', exact: true }).click();
+  await expect(page.locator('.drinks-menu-card')).toHaveCount(4);
+  await expect(page.getByRole('heading', { name: 'كابتشينو', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'آيس لاتيه', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'حاجة ساقعة', exact: true }).click();
+  await expect(page.locator('.drinks-menu-card')).toHaveCount(4);
+  await expect(page.getByRole('heading', { name: 'آيس لاتيه', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'كابتشينو', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'كل الاختيارات', exact: true }).click();
+  await expect(page.locator('.drinks-menu-card')).toHaveCount(8);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

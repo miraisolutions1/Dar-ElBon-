@@ -130,6 +130,63 @@ export function placeOrder(db, input) {
     const items = [];
     let subtotal = 0;
     for (const line of input.items) {
+      if (line.type === 'blend') {
+        const components = [];
+        let unitPrice = 0;
+        let weight = 0;
+        for (const component of line.components) {
+          const ingredient = getProduct(
+            db,
+            db.prepare('SELECT * FROM products WHERE id=? AND active=1').get(component.productId),
+          );
+          const priceVariant = ingredient?.variants.find((variant) => variant.weight === 50);
+          if (
+            !ingredient ||
+            ingredient.kind !== 'حبوب للتوليف' ||
+            ingredient.stockMode !== 'grams' ||
+            !priceVariant ||
+            (settings.mode === 'live' && ingredient.demo)
+          )
+            throw new HttpError(409, 'أحد مكونات التوليفة لم يعد متاحًا. راجع اختيارك.');
+          if (!ingredient.grinds.includes(line.grind))
+            throw new HttpError(400, `الطحنة غير متاحة لمكون ${ingredient.name}.`);
+          const amount = component.grams * line.quantity;
+          const changed = db
+            .prepare('UPDATE products SET stock_grams=stock_grams-? WHERE id=? AND stock_grams>=?')
+            .run(amount, ingredient.id, amount);
+          if (!changed.changes)
+            throw new HttpError(409, `كمية ${ingredient.name} غير متاحة للتوليفة المطلوبة.`);
+          db.prepare('UPDATE products SET updated_at=MAX(updated_at+1,?) WHERE id=?').run(
+            Date.now(),
+            ingredient.id,
+          );
+          const componentPrice = (component.grams / 50) * priceVariant.price;
+          unitPrice += componentPrice;
+          weight += component.grams;
+          components.push({
+            productId: ingredient.id,
+            name: ingredient.name,
+            grams: component.grams,
+            pricePer50: priceVariant.price,
+            unitPrice: componentPrice,
+            stockMode: 'grams',
+          });
+        }
+        const total = unitPrice * line.quantity;
+        subtotal += total;
+        items.push({
+          type: 'blend',
+          name: 'توليفتك الخاصة',
+          image: '/images/coffee-story.webp',
+          weight,
+          price: unitPrice,
+          quantity: line.quantity,
+          grind: line.grind,
+          total,
+          components,
+        });
+        continue;
+      }
       const product = getProduct(
         db,
         db.prepare('SELECT * FROM products WHERE id=? AND active=1').get(line.productId),
@@ -237,6 +294,14 @@ export function updateOrder(db, id, patch, user) {
       throw new HttpError(400, 'سجل رد المبلغ أولًا قبل إلغاء طلب مدفوع.');
     if (status === 'cancelled' && row.status !== 'cancelled') {
       for (const item of JSON.parse(row.items)) {
+        if (item.type === 'blend') {
+          for (const component of item.components) {
+            db.prepare(
+              'UPDATE products SET stock_grams=stock_grams+?,updated_at=MAX(updated_at+1,?) WHERE id=?',
+            ).run(component.grams * item.quantity, Date.now(), component.productId);
+          }
+          continue;
+        }
         // Return to the inventory model captured at purchase, even if the product was edited later.
         if (item.stockMode === 'grams')
           db.prepare('UPDATE products SET stock_grams=stock_grams+? WHERE id=?').run(

@@ -13,11 +13,11 @@ test('blend preview calculates initial total in integer cents and independent in
   assert.equal(total.price, 22000);
   assert.deepEqual(
     total.items.map((item) => item.price),
-    [12000, 10000, 0],
+    [12000, 10000, 0, 0, 0, 0, 0, 0],
   );
   assert.deepEqual(
     total.items.map((item) => item.share),
-    [60, 40, 0],
+    [60, 40, 0, 0, 0, 0, 0, 0],
   );
   const half = calculateBlend({ brazil: 50, colombia: 50, ethiopia: 50 });
   assert.equal(half.price, 15000);
@@ -46,7 +46,7 @@ test('blend preview handles zero amounts, invalid input and ingredient limits wi
   assert.equal(zero.price, 0);
   assert.deepEqual(
     zero.items.map((item) => item.share),
-    [0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
   );
   for (const invalid of [NaN, Infinity, -Infinity, -50])
     assert.equal(normalizeBlendGrams(invalid), 0);
@@ -56,4 +56,19 @@ test('blend preview handles zero amounts, invalid input and ingredient limits wi
   const maximum = calculateBlend({ brazil: 1000, colombia: 1000, ethiopia: 1000 });
   assert.equal(maximum.weight, 3000);
   assert.equal(maximum.price, 300000);
+});
+
+test('blend pricing uses canonical catalog rates and includes all eight origins', () => {
+  const rates = { brazil: 9000, colombia: 11000 };
+  const total = calculateBlend(initialBlend, rates);
+  assert.equal(total.items.length, 8);
+  assert.equal(total.price, 24500);
+  const legacy = validateSavedBlend({
+    amounts: { brazil: 150, colombia: 100, ethiopia: 0 },
+    preview: true,
+    savedAt: 1,
+  });
+  assert.equal(Object.keys(legacy).length, 8);
+  assert.equal(legacy.india, 0);
+  assert.equal(calculateBlend({ india: 50 }, { india: 7000 }).price, 3500);
 });

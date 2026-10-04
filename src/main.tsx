@@ -1,3 +1,4 @@
+import { DrinksMenu } from './drinks-menu';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
@@ -66,6 +67,7 @@ createRoot(document.getElementById('root')!).render(
             <Route element={<StoreLayout />}>
               <Route index element={<Home />} />
               <Route path="shop" element={<Shop />} />
+              <Route path="menu" element={<DrinksMenu />} />
               <Route path="products/:slug" element={<ProductPage />} />
               <Route path="cart" element={<CartPage />} />
               <Route path="checkout" element={<Checkout />} />

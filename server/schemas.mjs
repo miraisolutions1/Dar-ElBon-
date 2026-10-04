@@ -119,12 +119,40 @@ export const orderSchema = z
     expectedTotal: z.number().int().min(0).optional(),
     items: z
       .array(
-        z.object({
-          productId: z.string().uuid(),
-          variantId: z.string().uuid(),
-          grind: short,
-          quantity: z.number().int().min(1).max(30),
-        }),
+        z.union([
+          z.object({
+            type: z.literal('product').optional(),
+            productId: z.string().uuid(),
+            variantId: z.string().uuid(),
+            grind: short,
+            quantity: z.number().int().min(1).max(30),
+          }),
+          z.object({
+            type: z.literal('blend'),
+            components: z
+              .array(
+                z.object({
+                  productId: z.string().uuid(),
+                  grams: z.number().int().min(50).max(1000).multipleOf(50),
+                }),
+              )
+              .min(1)
+              .max(8)
+              .refine(
+                (components) =>
+                  new Set(components.map((component) => component.productId)).size ===
+                  components.length,
+                { message: 'لا يمكن تكرار مكون التوليفة.' },
+              )
+              .refine(
+                (components) =>
+                  components.reduce((sum, component) => sum + component.grams, 0) <= 3000,
+                { message: 'وزن التوليفة لا يزيد عن 3000 جم.' },
+              ),
+            grind: short,
+            quantity: z.number().int().min(1).max(30),
+          }),
+        ]),
       )
       .min(1)
       .max(30),

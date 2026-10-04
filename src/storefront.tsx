@@ -1,8 +1,10 @@
 import copy from '../content/site-copy-ar.json';
 import experience from '../content/coffee-experience-ar.json';
-import { TasteQuiz, RecipeCards, BranchDrinks } from './coffee-experience';
+import { TasteQuiz, RecipeCards } from './coffee-experience';
 import { BlendBuilder } from './blend-builder';
 import { HeroMedia } from './hero-media';
+import { DrinksMenu } from './drinks-menu';
+import { BrewMotion } from './brew-motion';
 import { useState, useEffect, type FormEvent } from 'react';
 import {
   Link,
@@ -277,7 +279,10 @@ export function StoreLayout() {
             <span>© {new Date().getFullYear()} دار البن البرازيلي</span>
             <span>بكل هدوء… استمتع بقهوتك.</span>
             <span className="developer-credit" dir="ltr">
-              Developed by <strong>Mirai Solutions</strong>
+              Developed by{' '}
+              <a href="https://miraisolutions.net/" target="_blank" rel="noopener noreferrer">
+                <strong>Mirai Solutions</strong>
+              </a>
             </span>
           </div>
         </footer>
@@ -296,8 +301,13 @@ export function Home() {
   const sections: Record<string, React.ReactNode> = {
     branches: <Branches />,
     quiz: <TasteQuiz products={products} />,
-    recipes: <RecipeCards />,
-    experience: <BranchDrinks />,
+    recipes: (
+      <>
+        <RecipeCards />
+        <BrewMotion />
+      </>
+    ),
+    experience: <DrinksMenu />,
     brewing: (
       <section className="container section coffee-selection">
         <SectionTitle eyebrow={copy.brewing.eyebrow} title={copy.brewing.title} />
@@ -487,7 +497,7 @@ export function Home() {
           </span>
         </span>
       </div>
-      {settings.sections.map((s) => (
+      {['featured', ...settings.sections.filter((s) => s !== 'featured')].map((s) => (
         <div key={s}>{sections[s]}</div>
       ))}
     </>
@@ -740,21 +750,101 @@ export function ProductPage() {
 function useCartDetails() {
   const { products } = useStore();
   const { lines } = useCart();
-  return lines.map((line) => {
+  const demand = new Map<string, number>();
+  const details = lines.map((line) => {
+    if (line.type === 'blend') {
+      const components = line.components.map((component) => {
+        const product = products.find((p) => p.id === component.productId);
+        const variant = product?.variants.find((v) => v.weight === 50);
+        const valid =
+          !!product &&
+          product.active &&
+          product.kind === 'حبوب للتوليف' &&
+          product.stockMode === 'grams' &&
+          !!variant &&
+          product.grinds.includes(line.grind);
+        const key = `${component.productId}/grams`;
+        demand.set(key, (demand.get(key) || 0) + component.grams * line.quantity);
+        return { ...component, product, variant, valid, key };
+      });
+      const weight = components.reduce((sum, c) => sum + c.grams, 0);
+      const price = components.reduce(
+        (sum, c) => sum + ((c.variant?.price || 0) * c.grams) / 50,
+        0,
+      );
+      const available = Math.min(
+        30,
+        ...components.map((c) => Math.floor((c.product?.stockGrams || 0) / c.grams)),
+      );
+      const variant = { id: lineKey(line), weight, price, stock: available };
+      const product = {
+        id: lineKey(line),
+        slug: 'custom-blend',
+        name: 'توليفتك الخاصة',
+        description: '',
+        roast: '',
+        brew: [],
+        kind: 'توليفة خاصة',
+        grinds: [line.grind],
+        image: '/images/coffee-story.webp',
+        active: true,
+        featured: false,
+        demo: components.some((c) => c.product?.demo),
+        stockMode: 'units' as const,
+        stockGrams: 0,
+        variants: [variant],
+      };
+      return {
+        line,
+        product,
+        variant,
+        composition: components
+          .map((c) => `${c.product?.name || 'نوع غير متاح'} ${c.grams} جم`)
+          .join(' + '),
+        valid:
+          weight > 0 &&
+          weight <= 3000 &&
+          components.every((c) => c.valid) &&
+          available >= line.quantity,
+        total: price * line.quantity,
+        resources: components.map((c) => ({ key: c.key, available: c.product?.stockGrams || 0 })),
+      };
+    }
     const product = products.find((p) => p.id === line.productId);
     const variant = product?.variants.find((v) => v.id === line.variantId);
+    const key =
+      product?.stockMode === 'grams'
+        ? `${line.productId}/grams`
+        : `${line.productId}/${line.variantId}`;
+    const requested =
+      product?.stockMode === 'grams' ? (variant?.weight || 0) * line.quantity : line.quantity;
+    demand.set(key, (demand.get(key) || 0) + requested);
     return {
       line,
       product,
       variant,
+      composition: '',
       valid:
         !!product &&
+        product.active &&
         !!variant &&
         product.grinds.includes(line.grind) &&
         stock(product, variant) >= line.quantity,
       total: (variant?.price || 0) * line.quantity,
+      resources: [
+        {
+          key,
+          available: product?.stockMode === 'grams' ? product.stockGrams : variant?.stock || 0,
+        },
+      ],
     };
   });
+  return details.map((detail) => ({
+    ...detail,
+    valid:
+      detail.valid &&
+      detail.resources.every(({ key, available }) => (demand.get(key) || 0) <= available),
+  }));
 }
 export function CartPage() {
   const { remove, setQuantity } = useCart();
@@ -775,7 +865,7 @@ export function CartPage() {
       ) : (
         <div className="checkout-layout">
           <div className="cart-items">
-            {details.map(({ line, product, variant, total, valid }) => (
+            {details.map(({ line, product, variant, total, valid, composition }) => (
               <article className="cart-item" key={lineKey(line)}>
                 {product && <img src={product.image} alt={product.name} />}
                 <div className="cart-item-info">
@@ -783,6 +873,7 @@ export function CartPage() {
                   <p>
                     {variant?.weight} جم · {line.grind}
                   </p>
+                  {composition && <p className="blend-composition">{composition}</p>}
                   {!valid && (
                     <small className="danger-text">
                       الكمية أو الاختيار غير متاح؛ عدّل السلة للمتابعة.
@@ -1058,6 +1149,7 @@ export function Checkout() {
                 <small>
                   {d.variant?.weight} جم · {d.line.grind} × {d.line.quantity}
                 </small>
+                {d.composition && <small>{d.composition}</small>}
               </span>
               <strong>{money(d.total)}</strong>
             </div>
@@ -1151,6 +1243,9 @@ export function OrderPage() {
               <small>
                 {item.weight} جم · {item.grind} × {item.quantity}
               </small>
+              {item.type === 'blend' && (
+                <small>{item.components.map((c) => `${c.name} ${c.grams} جم`).join(' + ')}</small>
+              )}
             </span>
             <strong>{money(item.total)}</strong>
           </div>
@@ -1307,7 +1402,7 @@ export function BranchesPage() {
   return (
     <div className="page-space">
       <Branches />
-      <BranchDrinks />
+      <DrinksMenu />
       <div className="container branch-social">
         <SocialLinks />
       </div>
@@ -1414,6 +1509,7 @@ export function RecipesPage() {
   return (
     <div className="page-space">
       <RecipeCards />
+      <BrewMotion />
     </div>
   );
 }

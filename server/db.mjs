@@ -1,5 +1,6 @@
 import copy from '../content/site-copy-ar.json' with { type: 'json' };
 import experienceCopy from '../content/coffee-experience-ar.json' with { type: 'json' };
+import blendOrigins from '../content/blend-origins.json' with { type: 'json' };
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -105,8 +106,56 @@ export function openDatabase(directory = process.env.DATA_DIR || './data') {
     db.prepare('INSERT INTO variants VALUES(?,?,?,?,?,1)').run(randomUUID(), id, 250, 18000, 20);
     db.prepare('INSERT INTO variants VALUES(?,?,?,?,?,1)').run(randomUUID(), id, 500, 34000, 10);
     seedPreviewSada(db);
+    seedBlendIngredients(db);
   }
   return db;
+}
+
+export function seedBlendIngredients(db) {
+  return transaction(db, () => {
+    const missing = blendOrigins.filter(
+      (origin) => !db.prepare('SELECT id FROM products WHERE slug=?').get(origin.slug),
+    );
+    if (missing.length && getSettings(db).mode !== 'preview')
+      throw new Error('لا يمكن إضافة مكونات تجريبية في وضع البيع الفعلي.');
+    const created = [];
+    for (const origin of missing) {
+      const id = randomUUID();
+      const now = Date.now();
+      db.prepare('INSERT INTO products VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(
+        id,
+        origin.slug,
+        `بن ${origin.name}`,
+        `${origin.note} مثال عام قابل للاختلاف حسب الحبوب والتحميص والمعالجة. المنشأ والنوع والأسعار والمخزون بيانات معاينة، وليست قائمة معتمدة لدار البن.`,
+        origin.sampleRoast,
+        JSON.stringify(['تركي', 'إسبريسو', 'فلتر']),
+        'حبوب للتوليف',
+        JSON.stringify(['تركي ناعم', 'إسبريسو ناعم', 'فلتر متوسط', 'حبوب كاملة']),
+        `/images/beans-${origin.id}.webp`,
+        1,
+        0,
+        1,
+        'grams',
+        5000,
+        now,
+        now,
+      );
+      db.prepare('INSERT INTO variants VALUES(?,?,?,?,?,1)').run(
+        randomUUID(),
+        id,
+        50,
+        origin.pricePer100 / 2,
+        0,
+      );
+      created.push(id);
+    }
+    return {
+      created: created.length,
+      products: allProducts(db).filter((product) =>
+        blendOrigins.some((origin) => origin.slug === product.slug),
+      ),
+    };
+  });
 }
 
 // Explicit preview seed: called for a fresh catalog or manually after a backup.
