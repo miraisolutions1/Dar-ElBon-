@@ -1,4 +1,4 @@
--- Existing projects: replace the current admin function without changing any stored data.
+-- Existing projects: current safe admin function, preserves stored data.
 BEGIN;
 create or replace function public.dar_admin(action text,payload jsonb default '{}') returns jsonb language plpgsql security definer set search_path = '' as $$
 declare profile public.dar_admin_profiles%rowtype; owner boolean; verb text; path text; ident text; p jsonb; prior jsonb; s jsonb; o jsonb; patch jsonb; v jsonb; old_v jsonb; variants jsonb; retired jsonb; item jsonb; component jsonb; variant_index integer; variant_collection text; qty integer; next_status text; next_payment text; at_ms bigint; rows jsonb; total bigint; page integer; q text; filter_status text; uid uuid;
@@ -47,7 +47,7 @@ begin
  if action='GET /admin/settings' then return s; end if;
  if action='PUT /admin/settings' then
    perform 1 from public.dar_settings where id=1 for update;
-   p:=payload-'_query'; if not(p ? 'branches') then p:=p||jsonb_build_object('branches',s->'branches'); end if;
+   p:=payload-'_query'; if not(p ? 'cms') and s ? 'cms' then p:=p||jsonb_build_object('cms',s->'cms'); end if; if not(p ? 'branches') then p:=p||jsonb_build_object('branches',s->'branches'); end if;
    perform public.dar_validate_settings(p);
    if p->>'mode'='live' and (p->>'codEnabled')::boolean and exists(select 1 from jsonb_array_elements(public.dar_launch_checks(p)) c where not (c->>'ok')::boolean) then raise exception 'اعتمد بيانات المنتجات والشحن والسياسات قبل تفعيل البيع.'; end if;
    update public.dar_settings set value=p where id=1;

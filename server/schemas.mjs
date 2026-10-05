@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { readFileSync } from 'node:fs';
 const short = z.string().trim().min(1).max(200);
 export const imagePath = z.string().regex(/^\/(?:images|uploads)\/[a-zA-Z0-9._-]+$/);
 export const productSchema = z
@@ -38,9 +39,197 @@ export const productSchema = z
   .refine((p) => new Set(p.variants.map((v) => v.weight)).size === p.variants.length, {
     message: 'الأوزان لا يمكن تكرارها',
   });
+
+const cmsLink = z
+  .string()
+  .max(2000)
+  .refine(
+    (value) =>
+      value === '' ||
+      /^https:\/\/[^\s<>"\\]+$/.test(value) ||
+      /^\/(?!\/)[a-zA-Z0-9_./?#=%&+~-]*$/.test(value),
+    'استخدم رابط HTTPS أو مسارًا داخل الموقع.',
+  );
+const cmsImage = z
+  .string()
+  .max(2000)
+  .refine(
+    (value) =>
+      value === '' ||
+      /^\/(?:images|uploads)\/[a-zA-Z0-9._-]+$/.test(value) ||
+      /^https:\/\/[^\s<>"\\]+$/.test(value),
+    'استخدم صورة محلية أو رابط HTTPS.',
+  );
+const externalLink = z
+  .string()
+  .max(2000)
+  .refine((value) => value === '' || /^https:\/\/[^\s<>"\\]+$/.test(value), 'استخدم رابط HTTPS.');
+function contentShape(template, key = '', partial = true) {
+  if (typeof template === 'string' && ['id', 'value', 'slug'].includes(key))
+    return z.literal(template);
+  if (typeof template === 'string')
+    return /(?:image|logo)$/i.test(key)
+      ? cmsImage
+      : /(?:href|url)$/i.test(key)
+        ? cmsLink
+        : z.string().max(8000);
+  if (typeof template === 'boolean') return z.boolean();
+  if (typeof template === 'number') return z.number().finite();
+  if (Array.isArray(template)) {
+    const choices = template.map((item) => contentShape(item, '', false));
+    let list = z
+      .array(choices.length > 1 ? z.union(choices) : choices[0] || z.string().max(8000))
+      .min(template.length ? 1 : 0)
+      .max(40);
+    if (key === 'questions') list = list.length(template.length);
+    if (key === 'options') list = list.max(template.length);
+    return list.refine((items) => {
+      const identifiers = items
+        .filter((item) => item && typeof item === 'object' && ('id' in item || 'value' in item))
+        .map((item) => item.id ?? item.value);
+      return new Set(identifiers).size === identifiers.length;
+    }, 'معرّفات خيارات المحتوى لا تتكرر.');
+  }
+  if (template && typeof template === 'object') {
+    const shape = z
+      .object(
+        Object.fromEntries(
+          Object.entries(template).map(([name, value]) => [
+            name,
+            contentShape(value, name, partial),
+          ]),
+        ),
+      )
+      .strict();
+    return partial ? shape.partial() : shape;
+  }
+  return z.null();
+}
+const siteCopyTemplate = JSON.parse(
+  readFileSync(new URL('../content/site-copy-ar.json', import.meta.url), 'utf8'),
+);
+const experienceTemplate = JSON.parse(
+  readFileSync(new URL('../content/coffee-experience-ar.json', import.meta.url), 'utf8'),
+);
+const cmsSchema = z
+  .object({
+    siteCopy: contentShape(siteCopyTemplate).optional(),
+    experience: contentShape(experienceTemplate).optional(),
+    drinks: z
+      .array(
+        z
+          .object({
+            id: z
+              .string()
+              .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+              .max(100),
+            name: z.string().trim().min(1).max(200),
+            category: z.enum(['hot', 'cold']),
+            description: z.string().max(2000),
+            image: cmsImage,
+            price: z.number().int().min(0).max(10000000).nullable(),
+            active: z.boolean(),
+          })
+          .strict(),
+      )
+      .max(40)
+      .refine(
+        (items) => new Set(items.map((item) => item.id)).size === items.length,
+        'معرّفات المشروبات لا تتكرر.',
+      )
+      .optional(),
+    appearance: z
+      .object({
+        accent: z
+          .string()
+          .regex(/^#[0-9a-f]{6}$/i)
+          .optional(),
+        background: z
+          .string()
+          .regex(/^#[0-9a-f]{6}$/i)
+          .optional(),
+        text: z
+          .string()
+          .regex(/^#[0-9a-f]{6}$/i)
+          .optional(),
+        logo: cmsImage.optional(),
+      })
+      .strict()
+      .optional(),
+    social: z
+      .object({
+        facebook: externalLink.optional(),
+        instagram: externalLink.optional(),
+        whatsapp: externalLink.optional(),
+      })
+      .strict()
+      .optional(),
+    home: z
+      .object(
+        Object.fromEntries(
+          [
+            'storeTitle',
+            'storeDescription',
+            'storeCta',
+            'quizTitle',
+            'quizDescription',
+            'quizCta',
+            'learnTitle',
+            'learnDescription',
+            'learnCta',
+          ].map((key) => [key, z.string().max(2000).optional()]),
+        ),
+      )
+      .extend(
+        Object.fromEntries(
+          ['storyImage', 'quizImage', 'recipesImage', 'journeyImage', 'brewingImage'].map((key) => [
+            key,
+            cmsImage.optional(),
+          ]),
+        ),
+      )
+      .strict()
+      .optional(),
+    ritual: z
+      .array(
+        z
+          .object({ title: z.string().max(200), text: z.string().max(1000), href: cmsLink })
+          .strict(),
+      )
+      .max(6)
+      .optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (Buffer.byteLength(JSON.stringify(value), 'utf8') > 131072)
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'محتوى الموقع أكبر من الحد المدعوم.',
+      });
+    let count = 0;
+    const check = (item, depth = 0) => {
+      if (++count > 1200 || depth > 8) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'تركيب محتوى الموقع أكبر من الحد المدعوم.',
+        });
+        return;
+      }
+      if (Array.isArray(item)) for (const child of item) check(child, depth + 1);
+      else if (item && typeof item === 'object')
+        for (const [key, child] of Object.entries(item)) {
+          if (['__proto__', 'prototype', 'constructor'].includes(key))
+            context.addIssue({ code: z.ZodIssueCode.custom, message: 'مفتاح محتوى غير صالح.' });
+          check(child, depth + 1);
+        }
+    };
+    check(value);
+  });
+
 export const settingsSchema = z
   .object({
     brand: short,
+    cms: cmsSchema.optional(),
     mode: z.enum(['preview', 'live']),
     heroTitle: short,
     heroSubtitle: short,

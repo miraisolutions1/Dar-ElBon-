@@ -830,3 +830,111 @@ test('branch content persists, validates addresses and survives legacy settings 
   );
   assert.deepEqual((await f.request('/store')).data.settings.branches, []);
 });
+
+test('owner CMS settings persist publicly and preserve operational configuration', async (t) => {
+  const f = await fixture(t);
+  const original = getSettings(f.db);
+  const cms = {
+    home: { storeTitle: 'عنوان متجر من اختبار الواجهة البرمجية' },
+    appearance: { accent: '#eabc13', logo: '/images/dar-logo.webp' },
+    social: { facebook: 'https://www.facebook.com/fixturecoffee/', instagram: '' },
+    drinks: [
+      {
+        id: 'fixture-drink',
+        name: 'قهوة الاختبار',
+        category: 'cold',
+        description: 'وصف اختبار',
+        image: '/images/coffee-duo-hero.webp',
+        price: 8550,
+        active: true,
+      },
+    ],
+  };
+  const saved = await f.request('/admin/settings', {
+    method: 'PUT',
+    cookie: f.cookie,
+    body: { ...original, cms },
+  });
+  assert.equal(saved.status, 200);
+  assert.deepEqual(saved.data.cms, cms);
+  for (const key of [
+    'heroTitle',
+    'heroSubtitle',
+    'branches',
+    'shippingZones',
+    'mode',
+    'codEnabled',
+  ])
+    assert.deepEqual(saved.data[key], original[key]);
+  assert.deepEqual((await f.request('/store')).data.settings.cms, cms);
+  assert.deepEqual((await f.request('/admin/settings', { cookie: f.cookie })).data.cms, cms);
+});
+
+test('CMS validation and owner permissions reject unsafe or broken configuration without mutation', async (t) => {
+  const f = await fixture(t);
+  const original = getSettings(f.db);
+  const experience = JSON.parse(readFileSync('content/coffee-experience-ar.json', 'utf8'));
+  const editedQuestions = structuredClone(experience.quiz.questions);
+  editedQuestions[0].id = 'tampered-quiz-routing';
+  const invalidOverrides = [
+    { appearance: { accent: 'yellow' } },
+    { social: { facebook: 'javascript:alert(1)' } },
+    { social: { instagram: '//untrusted.example' } },
+    { home: { storeTitle: 123 } },
+    { experience: { quiz: { questions: editedQuestions } } },
+    {
+      drinks: [
+        {
+          id: 'bad-price',
+          name: 'مشروب',
+          category: 'hot',
+          description: 'وصف',
+          image: '/images/dar-logo.webp',
+          price: 50.5,
+          active: true,
+        },
+      ],
+    },
+    {
+      drinks: [
+        {
+          id: 'bad-photo',
+          name: 'مشروب',
+          category: 'hot',
+          description: 'وصف',
+          image: 'data:image/svg+xml,unsafe',
+          price: null,
+          active: true,
+        },
+      ],
+    },
+  ];
+  for (const cms of invalidOverrides) {
+    assert.equal(
+      (
+        await f.request('/admin/settings', {
+          method: 'PUT',
+          cookie: f.cookie,
+          body: { ...original, cms },
+        })
+      ).status,
+      400,
+    );
+    assert.deepEqual(getSettings(f.db), original);
+  }
+  const manager = await f.request('/auth/login', {
+    method: 'POST',
+    body: { username: 'manager', password: f.password },
+  });
+  assert.equal(
+    (
+      await f.request('/admin/settings', {
+        method: 'PUT',
+        cookie: manager.cookie,
+        body: { ...original, cms: { home: { storeTitle: 'غير مسموح' } } },
+      })
+    ).status,
+    403,
+  );
+  assert.deepEqual(getSettings(f.db), original);
+});

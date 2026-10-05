@@ -1,59 +1,11 @@
+import { useSiteContent } from './site-content';
+import { money } from './lib';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Coffee, Snowflake } from 'lucide-react';
 import './drinks-menu.css';
 
 type DrinkCategory = 'hot' | 'cold';
-const drinks: { id: string; name: string; category: DrinkCategory; description: string }[] = [
-  { id: 'espresso', name: 'إسبريسو', category: 'hot', description: 'فنجان صغير، ومذاق قهوة حاضر.' },
-  {
-    id: 'turkish',
-    name: 'قهوة تركي',
-    category: 'hot',
-    description: 'قهوة على الهادي، من الكنكة للفنجان.',
-  },
-  {
-    id: 'cappuccino',
-    name: 'كابتشينو',
-    category: 'hot',
-    description: 'قهوة ورغوة لبن، للحظة أهدى.',
-  },
-  { id: 'latte', name: 'لاتيه', category: 'hot', description: 'قهوة مع اللبن، لمزاج ناعم ودافي.' },
-  {
-    id: 'iced-latte',
-    name: 'آيس لاتيه',
-    category: 'cold',
-    description: 'لاتيه على الساقع، لفاصل من زحمة اليوم.',
-  },
-  {
-    id: 'iced-americano',
-    name: 'آيس أمريكانو',
-    category: 'cold',
-    description: 'القهوة على الساقع، بمذاقها الواضح.',
-  },
-  {
-    id: 'lemon-mint',
-    name: 'ليمون بالنعناع',
-    category: 'cold',
-    description: 'اختيار منعش، لما تحب تغيّر المزاج.',
-  },
-  {
-    id: 'iced-matcha',
-    name: 'آيس ماتشا',
-    category: 'cold',
-    description: 'ماتشا ساقعة، لحكاية بطعم مختلف.',
-  },
-];
-const drinkImages: Record<string, string> = {
-  espresso: '/images/drink-espresso.webp',
-  turkish: '/images/drink-turkish.webp',
-  cappuccino: '/images/drink-cappuccino.webp',
-  latte: '/images/drink-latte.webp',
-  'iced-latte': '/images/drink-iced-latte.webp',
-  'iced-americano': '/images/drink-iced-americano.webp',
-  'lemon-mint': '/images/drink-lemon-mint.webp',
-  'iced-matcha': '/images/drink-iced-matcha.webp',
-};
 const filters = [
   { value: 'all', label: 'كل الاختيارات' },
   { value: 'hot', label: 'حاجة سخنة' },
@@ -61,12 +13,11 @@ const filters = [
 ] as const;
 
 export function DrinksMenu({ compact = false }: { compact?: boolean }) {
+  const { drinks } = useSiteContent();
   const [category, setCategory] = useState<'all' | DrinkCategory>('all');
-  const shown = drinks.filter(
-    (drink) =>
-      (!compact || ['turkish', 'cappuccino', 'iced-latte', 'lemon-mint'].includes(drink.id)) &&
-      (category === 'all' || drink.category === category),
-  );
+  const shown = drinks
+    .filter((drink) => drink.active && (category === 'all' || drink.category === category))
+    .slice(0, compact ? 4 : undefined);
   return (
     <div className={`container page-space drinks-menu ${compact ? 'drinks-menu-compact' : ''}`}>
       <header className="drinks-menu-heading">
@@ -92,7 +43,7 @@ export function DrinksMenu({ compact = false }: { compact?: boolean }) {
         ))}
       </div>
       <p className="drinks-menu-count" aria-live="polite" aria-atomic="true">
-        {shown.length} اختيارات في التصوّر
+        {shown.length} مشروبات
       </p>
       <div className="drinks-menu-grid">
         {shown.map((drink) => (
@@ -102,7 +53,7 @@ export function DrinksMenu({ compact = false }: { compact?: boolean }) {
                 <Coffee size={48} strokeWidth={1.25} />
               </span>
               <img
-                src={drinkImages[drink.id]}
+                src={drink.image}
                 alt={`صورة توضيحية لمشروب ${drink.name}`}
                 loading="lazy"
                 onError={(event) => {
@@ -117,6 +68,7 @@ export function DrinksMenu({ compact = false }: { compact?: boolean }) {
             <div className="drinks-menu-copy">
               <h2>{drink.name}</h2>
               <p>{drink.description}</p>
+              {drink.price !== null && <strong>{money(drink.price)}</strong>}
             </div>
           </article>
         ))}

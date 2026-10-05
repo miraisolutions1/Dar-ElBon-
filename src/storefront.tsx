@@ -1,8 +1,8 @@
 import { RitualStrip } from './ritual-strip';
 import { PackageCards, CustomBlendCallout } from './packaged-store';
 import { isPackagedCoffee, packageKey, packageTitle } from './packaged-coffee';
-import copy from '../content/site-copy-ar.json';
-import experience from '../content/coffee-experience-ar.json';
+import { useSiteContent } from './site-content';
+
 import { TasteQuiz, RecipeCards } from './coffee-experience';
 import { BlendBuilder } from './blend-builder';
 import { HeroMedia } from './hero-media';
@@ -39,6 +39,7 @@ import {
   Minus,
   Plus,
   Facebook,
+  MessageCircle,
   Instagram,
   MapPin,
 } from 'lucide-react';
@@ -73,26 +74,35 @@ const socialPages = [
 ];
 
 function SocialLinks() {
+  const { social } = useSiteContent();
+  const pages = socialPages.map((item) => ({
+    ...item,
+    href: item.name === 'فيسبوك' ? social.facebook : social.instagram,
+  }));
+  if (social.whatsapp) pages.push({ name: 'واتساب', href: social.whatsapp, icon: MessageCircle });
   return (
     <div className="social-links">
-      {socialPages.map(({ name, href, icon: Icon }) => (
-        <a
-          key={name}
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`دار البن على ${name} — يفتح في نافذة جديدة`}
-        >
-          <Icon size={18} />
-          <span>{name}</span>
-          <ArrowUpLeft size={13} />
-        </a>
-      ))}
+      {pages
+        .filter((item) => item.href.startsWith('https://'))
+        .map(({ name, href, icon: Icon }) => (
+          <a
+            key={name}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`دار البن على ${name} — يفتح في نافذة جديدة`}
+          >
+            <Icon size={18} />
+            <span>{name}</span>
+            <ArrowUpLeft size={13} />
+          </a>
+        ))}
     </div>
   );
 }
 
 function Branches() {
+  const { siteCopy: copy, experience, home, appearance } = useSiteContent();
   const { settings } = useStore();
   if (!settings.branches?.length) return null;
   return (
@@ -130,6 +140,7 @@ function Branches() {
 }
 
 export function StoreLayout() {
+  const { siteCopy: copy, experience, home, appearance } = useSiteContent();
   const { settings } = useStore();
   const { count } = useCart();
   const [menu, setMenu] = useState(false);
@@ -152,7 +163,16 @@ export function StoreLayout() {
     return () => window.removeEventListener('keydown', close);
   }, []);
   return (
-    <div className={`storefront ${location.pathname === '/' ? 'home-page' : ''}`}>
+    <div
+      className={`storefront ${location.pathname === '/' ? 'home-page' : ''}`}
+      style={
+        {
+          '--brand-accent': appearance.accent,
+          '--cream': appearance.background,
+          '--ink': appearance.text,
+        } as import('react').CSSProperties
+      }
+    >
       <a href="#main" className="skip-link">
         انتقل للمحتوى
       </a>
@@ -168,13 +188,13 @@ export function StoreLayout() {
               aria-label="القائمة الرئيسية"
             >
               <NavLink to="/" end>
-                الرئيسية
+                {copy.navigation.home}
               </NavLink>
               <NavLink to="/shop">{copy.navigation.shop}</NavLink>
               <NavLink to="/blend">كوّن توليفتك</NavLink>
-              <NavLink to="/about">حكاية دار البن</NavLink>
-              <NavLink to="/branches">فروعنا</NavLink>
-              <NavLink to="/guide">ساعدني أختار</NavLink>
+              <NavLink to="/about">{copy.navigation.about}</NavLink>
+              <NavLink to="/branches">{copy.navigation.branches}</NavLink>
+              <NavLink to="/guide">{copy.navigation.guide}</NavLink>
             </nav>
             <div className="header-actions">
               <Link className="header-guide" to="/quiz">
@@ -295,8 +315,9 @@ export function StoreLayout() {
 }
 
 export function Home() {
+  const { siteCopy: copy, experience, home, appearance } = useSiteContent();
   const { settings, products } = useStore();
-  const coffeeSheet = '/images/brewing-editorial.webp';
+  const coffeeSheet = home.brewingImage;
   const sections: Record<string, React.ReactNode> = {
     branches: <Branches />,
     quiz: (
@@ -304,17 +325,13 @@ export function Home() {
         <div className="home-quiz-teaser">
           <div>
             <span className="eyebrow">كل مزاج، وله فنجان</span>
-            <h2>لسه بتدور على قهوتك؟</h2>
-            <p>٣ اختيارات بسيطة عن طريقتك وذوقك. نرشّح لك عبوة تناسبك، ونقول لك ليه.</p>
+            <h2>{home.quizTitle}</h2>
+            <p>{home.quizDescription}</p>
             <Link className="btn" to="/quiz">
-              اكتشف فنجانك <ArrowLeft size={18} />
+              {home.quizCta} <ArrowLeft size={18} />
             </Link>
           </div>
-          <img
-            src="/images/drink-espresso.webp"
-            alt="فنجان إسبريسو على خلفية دافئة"
-            loading="lazy"
-          />
+          <img src={home.quizImage} alt="فنجان إسبريسو على خلفية دافئة" loading="lazy" />
         </div>
       </section>
     ),
@@ -322,11 +339,11 @@ export function Home() {
       <section className="container home-learn-note">
         <div>
           <span className="eyebrow">تفاصيل صغيرة، تفرق في الفنجان</span>
-          <h2>القهوة الحلوة تبدأ من طريقة تحضيرها.</h2>
-          <p>من الكنكة للفلتر. خطوات بسيطة، ومقادير واضحة، وحكاية تستاهل تتعمل على الهادي.</p>
+          <h2>{home.learnTitle}</h2>
+          <p>{home.learnDescription}</p>
         </div>
         <Link className="text-link" to="/learn">
-          اكتشف طرق التحضير <ArrowLeft size={18} />
+          {home.learnCta} <ArrowLeft size={18} />
         </Link>
       </section>
     ),
@@ -382,11 +399,11 @@ export function Home() {
         <div className="package-section-heading">
           <div>
             <span className="eyebrow">المتجر · قهوة دار البن لبيتك</span>
-            <h2>حكايتك تبدأ باختيارك.</h2>
-            <p>العبوة، التحميص، سادة أو محوج. فنجان معمول على مزاجك.</p>
+            <h2>{home.storeTitle}</h2>
+            <p>{home.storeDescription}</p>
           </div>
           <Link className="text-link" to="/shop">
-            افتح المتجر <ArrowLeft size={18} />
+            {home.storeCta} <ArrowLeft size={18} />
           </Link>
         </div>
         <PackageCards products={products} preview />
@@ -404,7 +421,7 @@ export function Home() {
         <div className="story-band">
           <img
             className="story-background"
-            src="/images/coffee-story.webp"
+            src={home.storyImage}
             alt="حبوب بن محمصة في مغرفة خشبية"
             loading="lazy"
           />
@@ -486,10 +503,10 @@ export function Home() {
             <h1>{settings.heroTitle}</h1>
             <p>{settings.heroSubtitle}</p>
             <div className="hero-buttons">
-              <Link className="btn" to="/shop">
+              <Link className="btn" to={copy.hero.primaryHref}>
                 {copy.hero.primaryCta} <ArrowLeft size={18} />
               </Link>
-              <Link className="hero-secondary" to="/branches">
+              <Link className="hero-secondary" to={copy.hero.secondaryHref}>
                 {copy.hero.secondaryCta} <ArrowLeft size={16} />
               </Link>
             </div>
@@ -564,6 +581,7 @@ export function Shop() {
 }
 
 export function ProductPage() {
+  const { siteCopy: copy, experience, home, appearance } = useSiteContent();
   const { slug } = useParams();
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -1318,6 +1336,7 @@ export function OrderPage() {
 }
 
 export function Guide() {
+  const { siteCopy: copy, experience, home, appearance } = useSiteContent();
   const { products } = useStore();
   const [params] = useSearchParams();
   const requestedBrew = params.get('brew') || '';
@@ -1428,6 +1447,7 @@ export function BranchesPage() {
   );
 }
 export function About() {
+  const { siteCopy: copy, experience, home, appearance } = useSiteContent();
   const { settings } = useStore();
   return (
     <div className="container page-space">
@@ -1435,7 +1455,8 @@ export function About() {
         <div>
           <span className="eyebrow">حكاية دار البن</span>
           <h1>{settings.storyTitle}</h1>
-          {(settings.storyText === copy.story.shortText
+          {(settings.cms?.siteCopy?.story?.longParagraphs ||
+          settings.storyText === copy.story.shortText
             ? copy.story.longParagraphs
             : [settings.storyText]
           ).map((paragraph) => (
@@ -1459,7 +1480,7 @@ export function About() {
         <SectionTitle eyebrow={copy.journey.eyebrow} title={copy.journey.title} />
         <figure className="journey-visual">
           <img
-            src="/images/coffee-journey.webp"
+            src={home.journeyImage}
             alt="صورة توضيحية لرحلة البن من الثمار إلى الحبوب المحمصة والفنجان"
             loading="lazy"
           />

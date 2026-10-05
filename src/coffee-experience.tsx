@@ -14,7 +14,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import './coffee-quiz.css';
-import copy from '../content/coffee-experience-ar.json';
+import { useSiteContent } from './site-content';
 import { ProductCard, SectionTitle } from './components';
 import type { Product } from './lib';
 import { matchTasteProducts, type TasteAnswers } from './taste-matching';
@@ -30,6 +30,7 @@ export function TasteQuiz({
   products: Product[];
   standalone?: boolean;
 }) {
+  const { experience: copy, home } = useSiteContent();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<TasteAnswers>({ brew: '', kind: '', usage: '' });
   const panelRef = useRef<HTMLDivElement>(null);
@@ -230,6 +231,7 @@ export function TasteQuiz({
 }
 
 export function RecipeCards() {
+  const { experience: copy, home } = useSiteContent();
   return (
     <section className="container section recipe-section" id="recipes">
       <SectionTitle eyebrow={copy.recipes.eyebrow} title={copy.recipes.title} />
@@ -242,7 +244,7 @@ export function RecipeCards() {
               role="img"
               aria-label={recipe.imageAlt}
               style={{
-                backgroundImage: 'url(/images/coffee-recipes.webp)',
+                backgroundImage: `url("${home.recipesImage}")`,
                 backgroundPositionX: positions[index],
               }}
             />
@@ -286,6 +288,7 @@ export function RecipeCards() {
 }
 
 export function BranchDrinks() {
+  const { experience: copy, home } = useSiteContent();
   return (
     <section className="container section branch-drinks" id="branch-drinks">
       <SectionTitle eyebrow={copy.branchExperience.eyebrow} title={copy.branchExperience.title} />

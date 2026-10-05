@@ -55,7 +55,7 @@ export function createApp({
       referrerPolicy: { policy: 'no-referrer' },
     }),
   );
-  app.use(express.json({ limit: '128kb' }));
+  app.use(express.json({ limit: '256kb' }));
   app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store');
     if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
@@ -232,6 +232,7 @@ export function createApp({
   app.put('/api/admin/settings', owner, (req, res) => {
     const settings = parse(settingsSchema, req.body);
     if (settings.branches === undefined) settings.branches = getSettings(db).branches;
+    if (settings.cms === undefined) settings.cms = getSettings(db).cms;
     if (settings.mode === 'live' && settings.codEnabled) {
       const missing = launchChecks(db, settings).filter((c) => !c.ok);
       if (missing.length)

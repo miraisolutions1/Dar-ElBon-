@@ -1,4 +1,4 @@
-import copy from '../content/site-copy-ar.json';
+import { useSiteContent } from './site-content';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Plus, Minus, Upload, PackageOpen } from 'lucide-react';
@@ -15,9 +15,10 @@ import {
 
 export function Brand({ compact = false }: { compact?: boolean }) {
   const { settings } = useStore();
+  const { siteCopy: copy, appearance } = useSiteContent();
   return (
     <span className={`brand ${compact ? 'compact' : ''}`}>
-      <img className="brand-logo" src="/images/dar-logo.webp" alt="" width="64" height="64" />
+      <img className="brand-logo" src={appearance.logo} alt="" width="64" height="64" />
       <span>
         <strong>{settings.brand}</strong>
         <small>{copy.brand.tagline}</small>
@@ -51,6 +52,7 @@ export function ProductCard({
   product: Product;
   variant?: Variant;
 }) {
+  const { siteCopy: copy } = useSiteContent();
   const variant = selectedVariant || startingVariant(product);
   const href = `/products/${product.slug}${selectedVariant?.id ? `?variant=${encodeURIComponent(selectedVariant.id)}` : ''}`;
   return (

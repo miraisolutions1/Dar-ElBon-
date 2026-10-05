@@ -1,33 +1,5 @@
--- Repeatable backend upgrade; preserves all settings, prices, orders and accounts. Does not enable sales.
+-- Repeatable upgrade for existing projects. Validates CMS; changes no content, catalog, accounts or orders.
 BEGIN;
-create or replace function public.dar_now_ms() returns bigint language sql volatile set search_path = '' as $$ select floor(extract(epoch from clock_timestamp()) * 1000)::bigint $$;
-create or replace function public.dar_is_admin() returns boolean language sql stable security definer set search_path = '' as $$ select exists(select 1 from public.dar_admin_profiles where user_id=auth.uid() and active) $$;
-
-create or replace function public.dar_validate_product(p jsonb) returns void language plpgsql set search_path = '' as $$
-declare v jsonb; seen text[] := '{}';
-begin
-  if octet_length(p::text)>65536 or jsonb_typeof(p) is distinct from 'object' or coalesce(length(btrim(p->>'name')),0) not between 1 and 200 or coalesce(length(p->>'description'),0) not between 1 and 4000
-    or coalesce(p->>'slug','') !~ '^[a-z0-9]+(-[a-z0-9]+)*$' or length(p->>'slug') > 100
-    or coalesce(p->>'roast','') not in ('فاتح','وسط','غامق','غير محدد') or coalesce(p->>'stockMode','') not in ('units','grams')
-    or coalesce(length(btrim(p->>'kind')),0) not between 1 and 80 or coalesce(p->>'image','') !~ '^(/(images|uploads)/[a-zA-Z0-9._-]+|https://[^[:space:]]+)$'
-    or jsonb_typeof(p->'active') is distinct from 'boolean' or jsonb_typeof(p->'featured') is distinct from 'boolean' or jsonb_typeof(p->'demo') is distinct from 'boolean'
-    or coalesce(p->>'stockGrams','') !~ '^[0-9]+$' or (p->>'stockGrams')::numeric > 100000000
-    or jsonb_typeof(p->'grinds') is distinct from 'array' or jsonb_array_length(p->'grinds') not between 1 and 8
-    or jsonb_typeof(p->'brew') is distinct from 'array' or jsonb_array_length(p->'brew') not between 1 and 3
-    or jsonb_typeof(p->'variants') is distinct from 'array' or jsonb_array_length(p->'variants') not between 1 and 12 then raise exception 'راجع بيانات المنتج المطلوبة.'; end if;
-  for v in select value from jsonb_array_elements(p->'brew') loop if jsonb_typeof(v)<>'string' or v #>> '{}' not in ('تركي','إسبريسو','فلتر') then raise exception 'طريقة تحضير غير صالحة.'; end if; end loop;
-  for v in select value from jsonb_array_elements(p->'grinds') loop if jsonb_typeof(v) <> 'string' or length(btrim(v #>> '{}')) not between 1 and 200 then raise exception 'طحنة غير صالحة.'; end if; end loop;
-  for v in select value from jsonb_array_elements(p->'variants') loop
-    if coalesce(v->>'weight','') !~ '^[0-9]+$' or (v->>'weight')::numeric not between 1 and 10000 or coalesce(v->>'price','') !~ '^[0-9]+$' or (v->>'price')::numeric not between 100 and 10000000 or coalesce(v->>'stock','') !~ '^[0-9]+$' or (v->>'stock')::numeric > 1000000 or v->>'weight' = any(seen) then raise exception 'راجع أوزان وأسعار ومخزون المنتج.'; end if;
-    if v ? 'id' then perform (v->>'id')::uuid; end if;
-    seen := array_append(seen,v->>'weight');
-  end loop;
-end $$;
-
-
-
-
-
 -- CMS is plain text and structured data. It never accepts HTML templates or executable URLs.
 create or replace function public.dar_validate_cms(cms jsonb) returns void language plpgsql set search_path = '' as $$
 declare specification jsonb := '{"siteCopy":{"brand":{"name":"string","tagline":"string","headerNote":"string","footerText":"string"},"navigation":{"home":"string","shop":"string","about":"string","guide":"string","branches":"string","searchPlaceholder":"string","cart":"string"},"hero":{"eyebrow":"string","title":"string","subtitle":"string","primaryCta":"string","primaryHref":"string","secondaryCta":"string","secondaryHref":"string","detail":"string"},"ritual":[{"lead":"string","emphasis":"string"},{"lead":"string","emphasis":"string"},{"lead":"string","emphasis":"string"}],"brewing":{"eyebrow":"string","title":"string","intro":"string","cta":"string","items":[{"name":"string","description":"string","guideText":"string"},{"name":"string","description":"string","guideText":"string"},{"name":"string","description":"string","guideText":"string"}]},"featured":{"eyebrow":"string","title":"string","intro":"string","allCta":"string","emptyTitle":"string","emptyText":"string"},"product":{"slug":"literal:dar-blend-mahawag","name":"string","shortDescription":"string","description":"string","demoNotice":"string","weightLabel":"string","grindLabel":"string","selectCta":"string","addCta":"string","careTitle":"string","careText":"string"},"story":{"eyebrow":"string","title":"string","shortText":"string","longParagraphs":["string","string","string"],"cta":"string"},"journey":{"eyebrow":"string","title":"string","intro":"string","items":[{"title":"string","text":"string"},{"title":"string","text":"string"},{"title":"string","text":"string"}]},"guide":{"eyebrow":"string","title":"string","intro":"string","bannerTitle":"string","bannerText":"string","cta":"string","brewStep":"string","brewHelp":"string","roastStep":"string","roastHelp":"string","emptyTitle":"string","emptyText":"string","resetCta":"string","tipsTitle":"string","tips":[{"title":"string","text":"string"},{"title":"string","text":"string"},{"title":"string","text":"string"}]},"faq":{"eyebrow":"string","title":"string","intro":"string","items":[{"question":"string","answer":"string"},{"question":"string","answer":"string"},{"question":"string","answer":"string"},{"question":"string","answer":"string"},{"question":"string","answer":"string"}]},"branches":{"eyebrow":"string","title":"string","intro":"string","mapCta":"string","mainLabel":"string","items":[{"name":"string","address":"string","main":"boolean"},{"name":"string","address":"string","main":"boolean"},{"name":"string","address":"string","main":"boolean"},{"name":"string","address":"string","main":"boolean"}]},"social":{"eyebrow":"string","title":"string","text":"string","facebookLabel":"string","instagramLabel":"string"},"shop":{"eyebrow":"string","title":"string","intro":"string","emptyTitle":"string","emptyText":"string","resetCta":"string"},"imageAlt":{"hero":"string","product":"string","story":"string","harvest":"string","roasting":"string"}},"experience":{"header":{"note":"string","quizCta":"string"},"quiz":{"eyebrow":"string","title":"string","description":"string","startCta":"string","nextCta":"string","backCta":"string","resultCta":"string","restartCta":"string","progressLabel":"string","questions":[{"id":"literal:brew","title":"string","help":"string","options":[{"value":"literal:تركي","label":"string","description":"string"},{"value":"literal:إسبريسو","label":"string","description":"string"},{"value":"literal:فلتر","label":"string","description":"string"}]},{"id":"literal:kind","title":"string","help":"string","options":[{"value":"literal:سادة","label":"string","description":"string"},{"value":"literal:محوج","label":"string","description":"string"},{"value":"literal:any","label":"string","description":"string"}]},{"id":"literal:usage","title":"string","help":"string","options":[{"value":"literal:try","label":"string","description":"string"},{"value":"literal:daily","label":"string","description":"string"},{"value":"literal:share","label":"string","description":"string"}]}],"result":{"eyebrow":"string","title":"string","multipleTitle":"string","matchedExplanation":"string","openKindExplanation":"string","tryWeightExplanation":"string","dailyWeightExplanation":"string","shareWeightExplanation":"string","weightLabel":"string","cta":"string","note":"string"},"empty":{"title":"string","description":"string","editCta":"string","guideCta":"string","alternativeLabel":"string","alternativeCtaTemplate":"string","alternativeExplanation":"string"}},"recipes":{"eyebrow":"string","title":"string","intro":"string","openCta":"string","closeCta":"string","ingredientsLabel":"string","stepsLabel":"string","tipLabel":"string","items":[{"id":"literal:turkish","brew":"string","title":"string","description":"string","imageAlt":"string","yield":"string","grind":"string","ingredients":["string","string","string"],"steps":["string","string","string","string"],"tip":"string"},{"id":"literal:espresso","brew":"string","title":"string","description":"string","imageAlt":"string","yield":"string","grind":"string","ingredients":["string","string"],"steps":["string","string","string","string"],"tip":"string"},{"id":"literal:filter","brew":"string","title":"string","description":"string","imageAlt":"string","yield":"string","grind":"string","ingredients":["string","string","string"],"steps":["string","string","string","string"],"tip":"string"}]},"branchExperience":{"eyebrow":"string","title":"string","description":"string","cta":"string","imageCaption":"string","generatedImageCaption":"string","items":[{"id":"literal:green-cold-drink","title":"string","description":"string","imageAlt":"string"},{"id":"literal:light-creamy-drink","title":"string","description":"string","imageAlt":"string"},{"id":"literal:iced-coffee","title":"string","description":"string","imageAlt":"string"}]},"plainProduct":{"name":"string","description":"string","unavailableCta":"string","imageAlt":"string"}},"drinks":[{"id":"string","name":"string","category":"string","description":"string","image":"string","price":"price","active":"boolean"}],"appearance":{"accent":"string","background":"string","text":"string","logo":"string"},"social":{"facebook":"string","instagram":"string","whatsapp":"string"},"home":{"storeTitle":"string","storeDescription":"string","storeCta":"string","quizTitle":"string","quizDescription":"string","quizCta":"string","learnTitle":"string","learnDescription":"string","learnCta":"string","storyImage":"string","quizImage":"string","recipesImage":"string","journeyImage":"string","brewingImage":"string"},"ritual":[{"title":"string","text":"string","href":"string"}]}'::jsonb; queue jsonb; current_node jsonb; current_value jsonb; expected jsonb; depth integer; visited integer:=0; partial boolean; node_path text; field record; text_value text; child_shape jsonb; identifiers text[]; identifier text; seen text[]:='{}';
@@ -111,123 +83,8 @@ begin
   end if;
 end $$;
 
-create or replace function public.dar_launch_checks(s jsonb) returns jsonb language sql stable security definer set search_path = '' as $$
- select jsonb_build_array(
- jsonb_build_object('label','منتج نشط واحد على الأقل ببيانات معتمدة','ok',exists(select 1 from public.dar_products where (data->>'active')::boolean) and not exists(select 1 from public.dar_products where (data->>'active')::boolean and (data->>'demo')::boolean)),
- jsonb_build_object('label','منطقة توصيل معتمدة أو فرع استلام متاح','ok',exists(select 1 from jsonb_array_elements(coalesce(s->'shippingZones','[]')) z where (z->>'enabled')::boolean and z->>'id' <> 'demo-zone' and position('تجريب' in z->>'name')=0) or exists(select 1 from jsonb_array_elements(coalesce(s->'branches','[]')) b where coalesce((b->>'enabled')::boolean,true) and length(btrim(coalesce(b->>'name','')))>0 and length(btrim(coalesce(b->>'address','')))>0)),
- jsonb_build_object('label','وسيلة تواصل وسياسات الشحن والاستبدال والخصوصية','ok',length(btrim(coalesce(s->>'contactPhone','')))>0 and length(btrim(coalesce(s->>'shippingPolicy','')))>0 and length(btrim(coalesce(s->>'returnsPolicy','')))>0 and length(btrim(coalesce(s->>'privacyPolicy','')))>0),
- jsonb_build_object('label','طريقة دفع مفعلة','ok',coalesce((s->>'codEnabled')::boolean,false)))
-$$;
 
-create or replace function public.dar_public_order(o jsonb) returns jsonb language sql immutable set search_path = '' as $$ select (o - 'id' - 'note') || jsonb_build_object('customer',jsonb_build_object('name',o->'customer'->'name','city',o->'customer'->'city')) $$;
-create or replace function public.dar_store() returns jsonb language plpgsql stable security definer set search_path = '' as $$
-declare s jsonb; products jsonb;
-begin
- select value into s from public.dar_settings where id=1;
- if s is null then raise exception 'المتجر لم يتم إعداده بعد.'; end if;
- s := jsonb_set(s,'{shippingZones}',coalesce((select jsonb_agg(z) from jsonb_array_elements(s->'shippingZones') z where (z->>'enabled')::boolean and (s->>'mode'='preview' or (z->>'id'<>'demo-zone' and position('تجريب' in z->>'name')=0))),'[]'));
- select coalesce(jsonb_agg(data-'retiredVariants' order by data->>'name'),'[]') into products from public.dar_products where (data->>'active')::boolean and (s->>'mode'='preview' or not (data->>'demo')::boolean);
- return jsonb_build_object('settings',s,'products',products);
-end $$;
-
-create or replace function public.dar_place_order(input jsonb) returns jsonb language plpgsql security definer set search_path = '' as $$
-declare s jsonb; customer jsonb; zone jsonb; branch jsonb := null; pickup boolean; l jsonb; c jsonb; p jsonb; v jsonb; variants jsonb; components jsonb; items jsonb := '[]'; seen uuid[]; pid uuid; vid uuid; grams integer; qty integer; amount integer; weight integer; unit_price bigint; subtotal bigint:=0; fee bigint; total bigint; at_ms bigint; order_id bigint; order_token text; request_key uuid; request_hash text; previous public.dar_orders%rowtype; order_data jsonb; vi integer;
-begin
- if jsonb_typeof(input) is distinct from 'object' or octet_length(input::text)>131072 then raise exception 'بيانات الطلب غير صالحة.'; end if;
- request_key := (input->>'idempotencyKey')::uuid;
- if request_key is null then raise exception 'مفتاح الطلب مطلوب.'; end if;
- request_hash := encode(extensions.digest(input::text,'sha256'),'hex');
- perform pg_advisory_xact_lock(hashtextextended(request_key::text,0));
- select * into previous from public.dar_orders where idempotency_key=request_key;
- if found then if previous.request_hash<>request_hash then raise exception 'تم استخدام مفتاح الطلب لبيانات مختلفة.'; end if; return public.dar_public_order(previous.data); end if;
- -- A single store-row lock serializes inventory operations and content snapshots.
- select value into s from public.dar_settings where id=1 for update;
- if s is null or not coalesce((s->>'codEnabled')::boolean,false) then raise exception 'استقبال الطلبات غير متاح حاليًا.'; end if;
- if s->>'mode'='live' and exists(select 1 from jsonb_array_elements(public.dar_launch_checks(s)) t where not (t->>'ok')::boolean) then raise exception 'استقبال الطلبات متوقف حتى اعتماد إعدادات البيع.'; end if;
- customer := input->'customer';
- if jsonb_typeof(customer) is distinct from 'object' or coalesce(length(btrim(customer->>'name')),0) not between 3 and 100 or coalesce(customer->>'phone','') !~ '^\+?[0-9 ()-]{8,25}$' or length(coalesce(customer->>'notes',''))>500 then raise exception 'راجع اسم العميل ورقم الهاتف.'; end if;
- customer := jsonb_build_object('name',btrim(customer->>'name'),'phone',btrim(customer->>'phone'),'city',coalesce(customer->>'city',''),'address',coalesce(customer->>'address',''),'notes',coalesce(customer->>'notes',''));
- if (select count(*) from public.dar_orders where data->'customer'->>'phone'=customer->>'phone' and (data->>'createdAt')::bigint>public.dar_now_ms()-900000)>=20 then raise exception 'طلبات كثيرة على هذا الرقم. حاول لاحقًا.'; end if;
- if coalesce(input->>'fulfillment','delivery') not in ('delivery','pickup') or input->>'paymentMethod' is distinct from 'cod' then raise exception 'طريقة الاستلام أو الدفع غير صالحة.'; end if;
- pickup := input->>'fulfillment'='pickup';
- if pickup then
-   if coalesce(input->>'pickupBranchIndex','') !~ '^[0-9]+$' or (input->>'pickupBranchIndex')::numeric>11 then raise exception 'اختر فرع الاستلام.'; end if;
-   branch := s->'branches'->((input->>'pickupBranchIndex')::integer);
-   if branch is null or branch->>'name' is null or branch->>'address' is null or coalesce((branch->>'enabled')::boolean,true)=false then raise exception 'فرع الاستلام غير متاح.'; end if;
-   branch := jsonb_build_object('name',branch->>'name','address',branch->>'address');
-   zone := jsonb_build_object('name',branch->>'name','fee',0,'eta','انتظر تأكيد تجهيز طلبك للاستلام من الفرع.');
- else
-   if coalesce(length(customer->>'city'),0) not between 1 and 200 or coalesce(length(customer->>'address'),0) not between 8 and 500 then raise exception 'أدخل مدينة وعنوان توصيل كاملين.'; end if;
-   select z into zone from jsonb_array_elements(s->'shippingZones') z where z->>'id'=input->>'zoneId' and (z->>'enabled')::boolean;
-   if zone is null or (s->>'mode'='live' and (zone->>'id'='demo-zone' or position('تجريب' in zone->>'name')>0)) then raise exception 'اختر منطقة توصيل متاحة.'; end if;
- end if;
- if jsonb_typeof(input->'items') is distinct from 'array' or jsonb_array_length(input->'items') not between 1 and 30 then raise exception 'السلة غير صالحة.'; end if;
- for l in select value from jsonb_array_elements(input->'items') loop
-   if coalesce(l->>'quantity','') !~ '^[0-9]+$' or (l->>'quantity')::numeric not between 1 and 30 or coalesce(length(l->>'grind'),0) not between 1 and 200 then raise exception 'راجع الكمية والطحنة.'; end if;
-   qty := (l->>'quantity')::integer;
-   if l->>'type'='blend' then
-     if jsonb_typeof(l->'components') is distinct from 'array' or jsonb_array_length(l->'components') not between 1 and 8 then raise exception 'مكونات التوليفة غير صالحة.'; end if;
-     seen:='{}'; components:='[]'; weight:=0; unit_price:=0;
-     for c in select value from jsonb_array_elements(l->'components') loop
-       pid := (c->>'productId')::uuid;
-       if pid is null or pid=any(seen) or coalesce(c->>'grams','') !~ '^[0-9]+$' or (c->>'grams')::numeric not between 50 and 1000 or mod((c->>'grams')::numeric,50)<>0 then raise exception 'أوزان أو مكونات التوليفة غير صالحة.'; end if;
-       seen:=array_append(seen,pid); grams:=(c->>'grams')::integer; weight:=weight+grams;
-       select data into p from public.dar_products where id=pid for update;
-       if p is null or not (p->>'active')::boolean or p->>'kind'<>'حبوب للتوليف' or p->>'stockMode'<>'grams' or (s->>'mode'='live' and (p->>'demo')::boolean) then raise exception 'أحد مكونات التوليفة غير متاح.'; end if;
-       if not (p->'grinds' ? (l->>'grind')) then raise exception 'الطحنة غير متاحة لكل مكونات التوليفة.'; end if;
-       select value into v from jsonb_array_elements(p->'variants') where (value->>'weight')::integer=50;
-       if v is null then raise exception 'سعر المكون غير متاح.'; end if;
-       amount:=grams*qty;
-       if (p->>'stockGrams')::integer<amount then raise exception 'مخزون أحد المكونات لا يكفي.'; end if;
-       p:=jsonb_set(p,'{stockGrams}',to_jsonb((p->>'stockGrams')::integer-amount));
-       p:=jsonb_set(p,'{updatedAt}',to_jsonb(greatest(public.dar_now_ms(),(p->>'updatedAt')::bigint+1)));
-       update public.dar_products set data=p where id=pid;
-       unit_price:=unit_price+(grams/50)*(v->>'price')::bigint;
-       components:=components||jsonb_build_array(jsonb_build_object('productId',pid,'name',p->>'name','grams',grams,'pricePer50',(v->>'price')::bigint,'unitPrice',(grams/50)*(v->>'price')::bigint,'stockMode','grams'));
-     end loop;
-     if weight>3000 then raise exception 'التوليفة لا تزيد عن 3000 جم.'; end if;
-     items:=items||jsonb_build_array(jsonb_build_object('type','blend','name','توليفتك الخاصة','image','/images/coffee-story.webp','weight',weight,'price',unit_price,'quantity',qty,'grind',l->>'grind','total',unit_price*qty,'components',components));
-   else
-     if coalesce(l->>'type','product')<>'product' then raise exception 'نوع بند السلة غير صالح.'; end if;
-     pid:=(l->>'productId')::uuid; vid:=(l->>'variantId')::uuid;
-     select data into p from public.dar_products where id=pid for update;
-     if p is null or not (p->>'active')::boolean or (s->>'mode'='live' and (p->>'demo')::boolean) then raise exception 'المنتج غير متاح.'; end if;
-     if not (p->'grinds' ? (l->>'grind')) then raise exception 'اختر طحنة متاحة.'; end if;
-     select value,(ordinality-1)::integer into v,vi from jsonb_array_elements(p->'variants') with ordinality where value->>'id'=vid::text;
-     if v is null then raise exception 'الوزن غير متاح.'; end if;
-     weight:=(v->>'weight')::integer; unit_price:=(v->>'price')::bigint;
-     if p->>'stockMode'='grams' then
-       amount:=weight*qty;
-       if (p->>'stockGrams')::integer<amount then raise exception 'الكمية المطلوبة غير متاحة.'; end if;
-       p:=jsonb_set(p,'{stockGrams}',to_jsonb((p->>'stockGrams')::integer-amount));
-     else
-       if (v->>'stock')::integer<qty then raise exception 'الكمية المطلوبة غير متاحة.'; end if;
-       p:=jsonb_set(p,array['variants',vi::text,'stock'],to_jsonb((v->>'stock')::integer-qty));
-     end if;
-     p:=jsonb_set(p,'{updatedAt}',to_jsonb(greatest(public.dar_now_ms(),(p->>'updatedAt')::bigint+1)));
-     update public.dar_products set data=p where id=pid;
-     items:=items||jsonb_build_array(jsonb_build_object('productId',pid,'variantId',vid,'name',p->>'name','slug',p->>'slug','image',p->>'image','weight',weight,'price',unit_price,'quantity',qty,'grind',l->>'grind','total',unit_price*qty,'stockMode',p->>'stockMode'));
-   end if;
-   subtotal:=subtotal+unit_price*qty;
- end loop;
- fee:=(zone->>'fee')::bigint; total:=subtotal+fee;
- if input ? 'expectedTotal' and (coalesce(input->>'expectedTotal','') !~ '^[0-9]+$' or (input->>'expectedTotal')::numeric<>total) then raise exception 'السعر أو تكلفة الشحن اتغيرت. راجع الإجمالي وأكد الطلب مرة أخرى.'; end if;
- at_ms:=public.dar_now_ms(); order_token:=encode(extensions.gen_random_bytes(32),'hex');
- insert into public.dar_orders(token,idempotency_key,request_hash,data) values(order_token,request_key,request_hash,'{}') returning id into order_id;
- order_data:=jsonb_build_object('id',order_id,'token',order_token,'reference','DB-'||to_char(now(),'YYMMDD')||'-'||upper(encode(extensions.gen_random_bytes(4),'hex')),'status','new','paymentStatus','unpaid','paymentMethod','cod','customer',customer,'items',items,'zone',zone->>'name','eta',zone->>'eta','subtotal',subtotal,'shipping',fee,'total',total,'demo',s->>'mode'<>'live','fulfillment',case when pickup then 'pickup' else 'delivery' end,'pickupBranch',branch,'note','','tracking','','createdAt',at_ms,'updatedAt',at_ms);
- update public.dar_orders set data=order_data where id=order_id;
- return public.dar_public_order(order_data);
-end $$;
-
-create or replace function public.dar_track_order(token text) returns jsonb language plpgsql stable security definer set search_path = '' as $$
-declare o jsonb;
-begin
- if token is null or token !~ '^[a-f0-9]{64}$' then raise exception 'الطلب غير موجود.'; end if;
- select data into o from public.dar_orders where dar_orders.token=dar_track_order.token;
- if o is null then raise exception 'الطلب غير موجود.'; end if;
- return public.dar_public_order(o);
-end $$;
-
+revoke all on function public.dar_validate_cms(jsonb),public.dar_validate_settings(jsonb) from public,anon,authenticated;
 create or replace function public.dar_admin(action text,payload jsonb default '{}') returns jsonb language plpgsql security definer set search_path = '' as $$
 declare profile public.dar_admin_profiles%rowtype; owner boolean; verb text; path text; ident text; p jsonb; prior jsonb; s jsonb; o jsonb; patch jsonb; v jsonb; old_v jsonb; variants jsonb; retired jsonb; item jsonb; component jsonb; variant_index integer; variant_collection text; qty integer; next_status text; next_payment text; at_ms bigint; rows jsonb; total bigint; page integer; q text; filter_status text; uid uuid;
 begin
@@ -342,5 +199,4 @@ begin
  raise exception 'عملية الإدارة غير مدعومة.';
 end $$;
 
-revoke all on function public.dar_validate_cms(jsonb) from public,anon,authenticated;
 COMMIT;

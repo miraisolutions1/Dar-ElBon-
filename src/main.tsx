@@ -1,3 +1,4 @@
+import { SiteAdmin } from './site-admin';
 import { isSupabaseEnabled } from './backend-config';
 import { DrinksMenu } from './drinks-menu';
 import React from 'react';
@@ -93,6 +94,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="products" element={<Products />} />
               <Route path="products/:id" element={<ProductEditor />} />
               <Route path="content" element={<SettingsPage contentOnly />} />
+              <Route path="site" element={<SiteAdmin />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="users" element={<UsersPage />} />
               <Route path="audit" element={<AuditPage />} />

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "espresso",
+    "name": "إسبريسو",
+    "category": "hot",
+    "description": "فنجان صغير، ومذاق قهوة حاضر.",
+    "image": "/images/drink-espresso.webp",
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "turkish",
+    "name": "قهوة تركي",
+    "category": "hot",
+    "description": "قهوة على الهادي، من الكنكة للفنجان.",
+    "image": "/images/drink-turkish.webp",
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "cappuccino",
+    "name": "كابتشينو",
+    "category": "hot",
+    "description": "قهوة ورغوة لبن، للحظة أهدى.",
+    "image": "/images/drink-cappuccino.webp",
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "latte",
+    "name": "لاتيه",
+    "category": "hot",
+    "description": "قهوة مع اللبن، لمزاج ناعم ودافي.",
+    "image": "/images/drink-latte.webp",
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "iced-latte",
+    "name": "آيس لاتيه",
+    "category": "cold",
+    "description": "لاتيه على الساقع، لفاصل من زحمة اليوم.",
+    "image": "/images/drink-iced-latte.webp",
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "iced-americano",
+    "name": "آيس أمريكانو",
+    "category": "cold",
+    "description": "القهوة على الساقع، بمذاقها الواضح.",
+    "image": "/images/drink-iced-americano.webp",
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "lemon-mint",
+    "name": "ليمون بالنعناع",
+    "category": "cold",
+    "description": "اختيار منعش، لما تحب تغيّر المزاج.",
+    "image": "/images/drink-lemon-mint.webp",
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "iced-matcha",
+    "name": "آيس ماتشا",
+    "category": "cold",
+    "description": "ماتشا ساقعة، لحكاية بطعم مختلف.",
+    "image": "/images/drink-iced-matcha.webp",
+    "price": null,
+    "active": true
+  }
+]

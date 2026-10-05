@@ -43,13 +43,77 @@ begin
   end loop;
 end $$;
 
+
+
+
+
+-- CMS is plain text and structured data. It never accepts HTML templates or executable URLs.
+create function public.dar_validate_cms(cms jsonb) returns void language plpgsql set search_path = '' as $$
+declare specification jsonb := '{"siteCopy":{"brand":{"name":"string","tagline":"string","headerNote":"string","footerText":"string"},"navigation":{"home":"string","shop":"string","about":"string","guide":"string","branches":"string","searchPlaceholder":"string","cart":"string"},"hero":{"eyebrow":"string","title":"string","subtitle":"string","primaryCta":"string","primaryHref":"string","secondaryCta":"string","secondaryHref":"string","detail":"string"},"ritual":[{"lead":"string","emphasis":"string"},{"lead":"string","emphasis":"string"},{"lead":"string","emphasis":"string"}],"brewing":{"eyebrow":"string","title":"string","intro":"string","cta":"string","items":[{"name":"string","description":"string","guideText":"string"},{"name":"string","description":"string","guideText":"string"},{"name":"string","description":"string","guideText":"string"}]},"featured":{"eyebrow":"string","title":"string","intro":"string","allCta":"string","emptyTitle":"string","emptyText":"string"},"product":{"slug":"literal:dar-blend-mahawag","name":"string","shortDescription":"string","description":"string","demoNotice":"string","weightLabel":"string","grindLabel":"string","selectCta":"string","addCta":"string","careTitle":"string","careText":"string"},"story":{"eyebrow":"string","title":"string","shortText":"string","longParagraphs":["string","string","string"],"cta":"string"},"journey":{"eyebrow":"string","title":"string","intro":"string","items":[{"title":"string","text":"string"},{"title":"string","text":"string"},{"title":"string","text":"string"}]},"guide":{"eyebrow":"string","title":"string","intro":"string","bannerTitle":"string","bannerText":"string","cta":"string","brewStep":"string","brewHelp":"string","roastStep":"string","roastHelp":"string","emptyTitle":"string","emptyText":"string","resetCta":"string","tipsTitle":"string","tips":[{"title":"string","text":"string"},{"title":"string","text":"string"},{"title":"string","text":"string"}]},"faq":{"eyebrow":"string","title":"string","intro":"string","items":[{"question":"string","answer":"string"},{"question":"string","answer":"string"},{"question":"string","answer":"string"},{"question":"string","answer":"string"},{"question":"string","answer":"string"}]},"branches":{"eyebrow":"string","title":"string","intro":"string","mapCta":"string","mainLabel":"string","items":[{"name":"string","address":"string","main":"boolean"},{"name":"string","address":"string","main":"boolean"},{"name":"string","address":"string","main":"boolean"},{"name":"string","address":"string","main":"boolean"}]},"social":{"eyebrow":"string","title":"string","text":"string","facebookLabel":"string","instagramLabel":"string"},"shop":{"eyebrow":"string","title":"string","intro":"string","emptyTitle":"string","emptyText":"string","resetCta":"string"},"imageAlt":{"hero":"string","product":"string","story":"string","harvest":"string","roasting":"string"}},"experience":{"header":{"note":"string","quizCta":"string"},"quiz":{"eyebrow":"string","title":"string","description":"string","startCta":"string","nextCta":"string","backCta":"string","resultCta":"string","restartCta":"string","progressLabel":"string","questions":[{"id":"literal:brew","title":"string","help":"string","options":[{"value":"literal:تركي","label":"string","description":"string"},{"value":"literal:إسبريسو","label":"string","description":"string"},{"value":"literal:فلتر","label":"string","description":"string"}]},{"id":"literal:kind","title":"string","help":"string","options":[{"value":"literal:سادة","label":"string","description":"string"},{"value":"literal:محوج","label":"string","description":"string"},{"value":"literal:any","label":"string","description":"string"}]},{"id":"literal:usage","title":"string","help":"string","options":[{"value":"literal:try","label":"string","description":"string"},{"value":"literal:daily","label":"string","description":"string"},{"value":"literal:share","label":"string","description":"string"}]}],"result":{"eyebrow":"string","title":"string","multipleTitle":"string","matchedExplanation":"string","openKindExplanation":"string","tryWeightExplanation":"string","dailyWeightExplanation":"string","shareWeightExplanation":"string","weightLabel":"string","cta":"string","note":"string"},"empty":{"title":"string","description":"string","editCta":"string","guideCta":"string","alternativeLabel":"string","alternativeCtaTemplate":"string","alternativeExplanation":"string"}},"recipes":{"eyebrow":"string","title":"string","intro":"string","openCta":"string","closeCta":"string","ingredientsLabel":"string","stepsLabel":"string","tipLabel":"string","items":[{"id":"literal:turkish","brew":"string","title":"string","description":"string","imageAlt":"string","yield":"string","grind":"string","ingredients":["string","string","string"],"steps":["string","string","string","string"],"tip":"string"},{"id":"literal:espresso","brew":"string","title":"string","description":"string","imageAlt":"string","yield":"string","grind":"string","ingredients":["string","string"],"steps":["string","string","string","string"],"tip":"string"},{"id":"literal:filter","brew":"string","title":"string","description":"string","imageAlt":"string","yield":"string","grind":"string","ingredients":["string","string","string"],"steps":["string","string","string","string"],"tip":"string"}]},"branchExperience":{"eyebrow":"string","title":"string","description":"string","cta":"string","imageCaption":"string","generatedImageCaption":"string","items":[{"id":"literal:green-cold-drink","title":"string","description":"string","imageAlt":"string"},{"id":"literal:light-creamy-drink","title":"string","description":"string","imageAlt":"string"},{"id":"literal:iced-coffee","title":"string","description":"string","imageAlt":"string"}]},"plainProduct":{"name":"string","description":"string","unavailableCta":"string","imageAlt":"string"}},"drinks":[{"id":"string","name":"string","category":"string","description":"string","image":"string","price":"price","active":"boolean"}],"appearance":{"accent":"string","background":"string","text":"string","logo":"string"},"social":{"facebook":"string","instagram":"string","whatsapp":"string"},"home":{"storeTitle":"string","storeDescription":"string","storeCta":"string","quizTitle":"string","quizDescription":"string","quizCta":"string","learnTitle":"string","learnDescription":"string","learnCta":"string","storyImage":"string","quizImage":"string","recipesImage":"string","journeyImage":"string","brewingImage":"string"},"ritual":[{"title":"string","text":"string","href":"string"}]}'::jsonb; queue jsonb; current_node jsonb; current_value jsonb; expected jsonb; depth integer; visited integer:=0; partial boolean; node_path text; field record; text_value text; child_shape jsonb; identifiers text[]; identifier text; seen text[]:='{}';
+begin
+ if jsonb_typeof(cms) is distinct from 'object' or octet_length(cms::text)>131072 then raise exception 'راجع محتوى الموقع وحجمه.'; end if;
+ queue:=jsonb_build_array(jsonb_build_object('value',cms,'shape',specification,'depth',0,'partial',true,'path','cms'));
+ while jsonb_array_length(queue)>0 loop
+  current_node:=queue->0; queue:=queue-0; current_value:=current_node->'value'; expected:=current_node->'shape'; depth:=(current_node->>'depth')::integer; partial:=(current_node->>'partial')::boolean; node_path:=current_node->>'path'; visited:=visited+1;
+  if visited>1200 or depth>8 then raise exception 'تركيب محتوى الموقع أكبر من الحد المدعوم.'; end if;
+  if jsonb_typeof(expected)='object' then
+   if jsonb_typeof(current_value) is distinct from 'object' then raise exception 'تركيب محتوى غير صالح: %',node_path; end if;
+   if not partial and exists(select 1 from jsonb_object_keys(expected) k where not (current_value ? k)) then raise exception 'بيانات عنصر المحتوى ناقصة: %',node_path; end if;
+   for field in select key,value from jsonb_each(current_value) loop
+    if field.key in ('__proto__','prototype','constructor') or not (expected ? field.key) then raise exception 'مفتاح محتوى غير صالح: %',field.key; end if;
+    queue:=queue||jsonb_build_array(jsonb_build_object('value',field.value,'shape',expected->field.key,'depth',depth+1,'partial',partial,'path',node_path||'.'||field.key));
+   end loop;
+  elsif jsonb_typeof(expected)='array' then
+   if jsonb_typeof(current_value) is distinct from 'array' or jsonb_array_length(current_value)>40 then raise exception 'قائمة محتوى غير صالحة: %',node_path; end if;
+   if node_path='cms.ritual' and jsonb_array_length(current_value)>6 then raise exception 'خطوات الاختيار لا تزيد عن ٦.'; end if;
+   if node_path='cms.experience.quiz.questions' and jsonb_array_length(current_value)<>3 then raise exception 'الاختبار يحتاج ٣ أسئلة.'; end if;
+   if node_path ~ '^cms.experience.quiz.questions.[0-9]+.options$' and jsonb_array_length(current_value) not between 1 and 3 then raise exception 'راجع اختيارات السؤال.'; end if;
+   if node_path not in ('cms.drinks','cms.ritual') and jsonb_array_length(current_value)=0 then raise exception 'قائمة المحتوى لا تكون فارغة: %',node_path; end if;
+   identifiers:='{}';
+   for field in select value,ordinality from jsonb_array_elements(current_value) with ordinality loop
+    identifier:=coalesce(field.value->>'id',field.value->>'value');
+    if identifier is not null then if identifier=any(identifiers) then raise exception 'معرّفات المحتوى لا تتكرر.'; end if; identifiers:=array_append(identifiers,identifier); end if;
+    child_shape:=null;
+    if jsonb_typeof(field.value)='object' then select candidate into child_shape from jsonb_array_elements(expected) candidate where (candidate->>'id'='literal:'||(field.value->>'id')) or (candidate->>'value'='literal:'||(field.value->>'value')) limit 1; end if;
+    child_shape:=coalesce(child_shape,expected->0);
+    queue:=queue||jsonb_build_array(jsonb_build_object('value',field.value,'shape',child_shape,'depth',depth+1,'partial',false,'path',node_path||'.'||field.ordinality));
+   end loop;
+  elsif expected #>> '{}' = 'price' then
+   if current_value <> 'null'::jsonb and (jsonb_typeof(current_value) is distinct from 'number' or current_value::text !~ '^[0-9]+$' or current_value::numeric>10000000) then raise exception 'سعر المشروب غير صالح.'; end if;
+  elsif left(expected #>> '{}',8)='literal:' then
+   if jsonb_typeof(current_value) is distinct from 'string' or current_value #>> '{}' <> substring(expected #>> '{}' from 9) then raise exception 'لا تغيّر المعرّفات التقنية لخيارات الموقع: %',node_path; end if;
+  else
+   if jsonb_typeof(current_value) is distinct from (expected #>> '{}') then raise exception 'نوع محتوى غير صالح: %',node_path; end if;
+   if jsonb_typeof(current_value)='string' then
+    text_value:=current_value #>> '{}';
+    if (node_path ~* '(href|url|image|logo|storyImage|quizImage|recipesImage|journeyImage|brewingImage)$' or node_path ~ '^cms.social.') and position(chr(92) in text_value)>0 then raise exception 'رابط المحتوى غير صالح.'; end if;
+    if length(text_value)>8000 then raise exception 'نص المحتوى طويل جدًا.'; end if;
+    if node_path ~ '^cms.appearance.(accent|background|text)$' and text_value !~ '^#[0-9a-fA-F]{6}$' then raise exception 'استخدم لونًا بصيغة #RRGGBB.'; end if;
+    if node_path ~ '^cms.social.' and (length(text_value)>2000 or (text_value<>'' and text_value !~ '^https://[^[:space:]<>"]+$')) then raise exception 'رابط التواصل يحتاج HTTPS.'; end if;
+    if node_path ~* '\.(image|logo|storyImage|quizImage|recipesImage|journeyImage|brewingImage)$' and (length(text_value)>2000 or (text_value<>'' and text_value !~ '^(/(images|uploads)/[a-zA-Z0-9._-]+|https://[^[:space:]<>"]+)$')) then raise exception 'مسار الصورة غير صالح.'; end if;
+    if node_path ~* '(href|url)$' and (length(text_value)>2000 or (text_value<>'' and (left(text_value,2)='//' or text_value !~ '^(https://[^[:space:]<>"]+|/[a-zA-Z0-9_./?#=%&+~-]*)$'))) then raise exception 'رابط المحتوى غير صالح.'; end if;
+    if node_path ~ '^cms.drinks.[0-9]+.id$' then
+     if length(text_value)>100 or text_value !~ '^[a-z0-9]+(-[a-z0-9]+)*$' or text_value=any(seen) then raise exception 'معرّف مشروب غير صالح أو مكرر.'; end if;
+     seen:=array_append(seen,text_value);
+    end if;
+    if node_path ~ '^cms.drinks.[0-9]+.name$' and length(btrim(text_value)) not between 1 and 200 then raise exception 'راجع اسم المشروب.'; end if;
+    if node_path ~ '^cms.drinks.[0-9]+.category$' and text_value not in ('hot','cold') then raise exception 'تصنيف المشروب غير صالح.'; end if;
+    if node_path ~ '^cms.drinks.[0-9]+.description$' and length(text_value)>2000 then raise exception 'وصف المشروب طويل جدًا.'; end if;
+    if node_path ~ '^cms.home.' and length(text_value)>2000 then raise exception 'نص القسم طويل جدًا.'; end if;
+    if node_path ~ '^cms.ritual.[0-9]+.title$' and length(text_value)>200 then raise exception 'عنوان الخطوة طويل جدًا.'; end if;
+    if node_path ~ '^cms.ritual.[0-9]+.text$' and length(text_value)>1000 then raise exception 'وصف الخطوة طويل جدًا.'; end if;
+   end if;
+  end if;
+ end loop;
+end $$;
+
 create function public.dar_validate_settings(s jsonb) returns void language plpgsql set search_path = '' as $$
 declare v jsonb; seen text[] := '{}';
 begin
   if jsonb_typeof(s) is distinct from 'object' or coalesce(s->>'mode','') not in ('preview','live') or coalesce(length(s->>'brand'),0) not between 1 and 200
     or jsonb_typeof(s->'codEnabled') is distinct from 'boolean' or jsonb_typeof(s->'shippingZones') is distinct from 'array' or jsonb_array_length(s->'shippingZones') > 50
     or jsonb_typeof(s->'sections') is distinct from 'array' or jsonb_array_length(s->'sections') > 8 then raise exception 'راجع إعدادات المتجر.'; end if;
-  if octet_length(s::text)>65536 or coalesce(length(s->>'heroTitle'),0) not between 1 and 200 or coalesce(length(s->>'heroSubtitle'),0) not between 1 and 200 or coalesce(length(s->>'storyTitle'),0) not between 1 and 200 or coalesce(length(s->>'storyText'),0)>3000 or coalesce(s->>'heroImage','') !~ '^(/(images|uploads)/[a-zA-Z0-9._-]+|https://[^[:space:]]+)$' or coalesce(length(s->>'shippingPolicy'),0)>8000 or coalesce(length(s->>'returnsPolicy'),0)>8000 or coalesce(length(s->>'privacyPolicy'),0)>8000 then raise exception 'راجع نصوص وصورة وسياسات المتجر.'; end if;
+  if octet_length(s::text)>196608 or coalesce(length(s->>'heroTitle'),0) not between 1 and 200 or coalesce(length(s->>'heroSubtitle'),0) not between 1 and 200 or coalesce(length(s->>'storyTitle'),0) not between 1 and 200 or coalesce(length(s->>'storyText'),0)>3000 or coalesce(s->>'heroImage','') !~ '^(/(images|uploads)/[a-zA-Z0-9._-]+|https://[^[:space:]]+)$' or coalesce(length(s->>'shippingPolicy'),0)>8000 or coalesce(length(s->>'returnsPolicy'),0)>8000 or coalesce(length(s->>'privacyPolicy'),0)>8000 then raise exception 'راجع نصوص وصورة وسياسات المتجر.'; end if;
   for v in select value from jsonb_array_elements(s->'shippingZones') loop
     if coalesce(length(v->>'id'),0) not between 1 and 60 or coalesce(length(v->>'name'),0) not between 1 and 200 or jsonb_typeof(v->'enabled') is distinct from 'boolean' or coalesce(v->>'fee','') !~ '^[0-9]+$' or (v->>'fee')::numeric > 1000000 or v->>'id' = any(seen) then raise exception 'راجع مناطق ورسوم التوصيل.'; end if;
     seen := array_append(seen,v->>'id');
@@ -59,6 +123,7 @@ begin
     if jsonb_typeof(v)<>'string' or v #>> '{}' not in ('featured','quiz','recipes','experience','story','branches','guide','brewing') or v #>> '{}' = any(seen) then raise exception 'أقسام الرئيسية غير صالحة.'; end if;
     seen := array_append(seen,v #>> '{}');
   end loop;
+  if s ? 'cms' then perform public.dar_validate_cms(s->'cms'); end if;
   if s ? 'branches' then
     if jsonb_typeof(s->'branches') <> 'array' or jsonb_array_length(s->'branches') > 12 then raise exception 'راجع الفروع.'; end if;
     for v in select value from jsonb_array_elements(s->'branches') loop if coalesce(length(v->>'name'),0) not between 1 and 80 or coalesce(length(v->>'address'),0) not between 1 and 300 or jsonb_typeof(v->'main') is distinct from 'boolean' or (v ? 'enabled' and jsonb_typeof(v->'enabled') <> 'boolean') then raise exception 'اسم وعنوان الفرع مطلوبان.'; end if; end loop;
@@ -229,7 +294,7 @@ begin
  if action='GET /admin/settings' then return s; end if;
  if action='PUT /admin/settings' then
    perform 1 from public.dar_settings where id=1 for update;
-   p:=payload-'_query'; if not(p ? 'branches') then p:=p||jsonb_build_object('branches',s->'branches'); end if;
+   p:=payload-'_query'; if not(p ? 'cms') and s ? 'cms' then p:=p||jsonb_build_object('cms',s->'cms'); end if; if not(p ? 'branches') then p:=p||jsonb_build_object('branches',s->'branches'); end if;
    perform public.dar_validate_settings(p);
    if p->>'mode'='live' and (p->>'codEnabled')::boolean and exists(select 1 from jsonb_array_elements(public.dar_launch_checks(p)) c where not (c->>'ok')::boolean) then raise exception 'اعتمد بيانات المنتجات والشحن والسياسات قبل تفعيل البيع.'; end if;
    update public.dar_settings set value=p where id=1;
@@ -296,7 +361,7 @@ begin
  raise exception 'عملية الإدارة غير مدعومة.';
 end $$;
 
-revoke all on function public.dar_now_ms(),public.dar_is_admin(),public.dar_validate_product(jsonb),public.dar_validate_settings(jsonb),public.dar_launch_checks(jsonb),public.dar_public_order(jsonb),public.dar_store(),public.dar_place_order(jsonb),public.dar_track_order(text),public.dar_admin(text,jsonb) from public,anon,authenticated;
+revoke all on function public.dar_now_ms(),public.dar_is_admin(),public.dar_validate_product(jsonb),public.dar_validate_cms(jsonb),public.dar_validate_settings(jsonb),public.dar_launch_checks(jsonb),public.dar_public_order(jsonb),public.dar_store(),public.dar_place_order(jsonb),public.dar_track_order(text),public.dar_admin(text,jsonb) from public,anon,authenticated;
 grant execute on function public.dar_store(),public.dar_place_order(jsonb),public.dar_track_order(text) to anon,authenticated;
 grant execute on function public.dar_admin(text,jsonb) to authenticated;
 grant execute on function public.dar_is_admin() to authenticated;

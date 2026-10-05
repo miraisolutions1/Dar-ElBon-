@@ -178,6 +178,7 @@ export function AdminShell() {
     ...(user.role === 'owner'
       ? [
           { path: '/admin/content', name: 'محتوى الرئيسية', icon: FileText },
+          { path: '/admin/site', name: 'إدارة الموقع بالكامل', icon: FileText },
           { path: '/admin/settings', name: 'إعدادات المتجر', icon: SettingsIcon },
           { path: '/admin/users', name: 'الفريق والصلاحيات', icon: Users },
           { path: '/admin/audit', name: 'سجل النشاط', icon: Activity },

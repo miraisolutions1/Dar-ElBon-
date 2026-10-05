@@ -595,3 +595,114 @@ run('Concurrent checkout cannot oversell and concurrent retries create one order
     sql(`UPDATE public.dar_products SET data=${literal(original)} WHERE id='${base.id}';`);
   }
 });
+
+run(
+  'Site CMS validates structured content, secure links, prices and owner-only persistence',
+  () => {
+    const original = JSON.parse(sql('SELECT value FROM public.dar_settings WHERE id=1;'));
+    const cms = {
+      siteCopy: JSON.parse(readFileSync('content/site-copy-ar.json', 'utf8')),
+      experience: JSON.parse(readFileSync('content/coffee-experience-ar.json', 'utf8')),
+      drinks: [
+        {
+          id: 'iced-latte',
+          name: 'آيس لاتيه',
+          category: 'cold',
+          description: 'قهوة باردة',
+          image: '/images/drink-iced-latte.webp',
+          price: 9000,
+          active: true,
+        },
+      ],
+      appearance: {
+        accent: '#FFCE00',
+        background: '#FAF6ED',
+        text: '#261D14',
+        logo: '/images/logo.webp',
+      },
+      social: {
+        facebook: 'https://www.facebook.com/thehouseofbraziliancoffee/',
+        instagram: 'https://www.instagram.com/braziliancaffe/',
+        whatsapp: 'https://wa.me/201012345678',
+      },
+      home: {
+        storeTitle: 'المتجر',
+        storeDescription: 'اختار قهوتك',
+        storyImage: '/images/coffee-story.webp',
+        quizImage: '/images/quiz.webp',
+        recipesImage: '/images/recipes.webp',
+        journeyImage: '/images/journey.webp',
+        brewingImage: '/images/brewing.webp',
+      },
+      ritual: [{ title: 'اختار قهوتك', text: 'حدد الوزن', href: '/shop' }],
+    };
+    const save = (payload, uid = owner) =>
+      sql(
+        as(
+          'authenticated',
+          uid,
+          `SELECT public.dar_admin('PUT /admin/settings',${literal(payload)});`,
+        ),
+      );
+    try {
+      sql(`SELECT public.dar_validate_cms(${literal(cms)});`);
+      for (let i = 0; i < 2; i++) sql(readFileSync('supabase/site-content-upgrade.sql', 'utf8'));
+      assert.equal(
+        JSON.parse(sql('SELECT value FROM public.dar_settings WHERE id=1;')).cms,
+        undefined,
+      );
+      assert.throws(() => save({ ...original, cms }, manager), /مالك/);
+      assert.throws(
+        () => sql(as('anon', '', `SELECT public.dar_validate_cms(${literal(cms)});`)),
+        /permission denied/,
+      );
+      save({ ...original, cms });
+      assert.deepEqual(JSON.parse(sql('SELECT public.dar_store();')).settings.cms, cms);
+      save({ ...original, heroTitle: 'Updated hero' });
+      assert.deepEqual(
+        JSON.parse(sql('SELECT value FROM public.dar_settings WHERE id=1;')).cms,
+        cms,
+      );
+      const invalid = [
+        { ...cms, appearance: { accent: 'red' } },
+        { ...cms, appearance: { logo: 'data:image/svg+xml,<svg/>' } },
+        { ...cms, social: { facebook: 'javascript:alert(1)' } },
+        { ...cms, social: { instagram: 'https://site.invalid/\\evil' } },
+        { ...cms, ritual: [{ title: 'Title', text: 'Text', href: '//evil.invalid' }] },
+        { ...cms, drinks: [{ ...cms.drinks[0], price: -1 }] },
+        { ...cms, drinks: [{ ...cms.drinks[0], price: 12.5 }] },
+        { ...cms, drinks: [cms.drinks[0], cms.drinks[0]] },
+        { ...cms, drinks: [{ ...cms.drinks[0], category: 'unknown' }] },
+        { ...cms, siteCopy: { faq: { items: 'not-array' } } },
+        {
+          ...cms,
+          experience: { recipes: { items: [{ id: 'turkish', title: 'missing fields' }] } },
+        },
+        { ...cms, siteCopy: JSON.parse('{"__proto__":{"x":"bad"}}') },
+        { ...cms, home: { storeTitle: 'x'.repeat(8001) } },
+        { ...cms, home: { quizImage: 'javascript:alert(1)' } },
+        { ...cms, home: { brewingImage: '//evil.invalid/a.webp' } },
+      ];
+      const invalidQuiz = structuredClone(cms);
+      invalidQuiz.experience.quiz.questions[0].options[0].value = 'unknown';
+      invalid.push(invalidQuiz);
+      const emptyQuiz = structuredClone(cms);
+      emptyQuiz.experience.quiz.questions = [];
+      invalid.push(emptyQuiz);
+      const duplicateQuiz = structuredClone(cms);
+      duplicateQuiz.experience.quiz.questions[1] = duplicateQuiz.experience.quiz.questions[0];
+      invalid.push(duplicateQuiz);
+      const duplicateOptions = structuredClone(cms);
+      duplicateOptions.experience.quiz.questions[0].options[1] =
+        duplicateOptions.experience.quiz.questions[0].options[0];
+      invalid.push(duplicateOptions);
+      for (const bad of invalid) assert.throws(() => save({ ...original, cms: bad }));
+      assert.deepEqual(
+        JSON.parse(sql('SELECT value FROM public.dar_settings WHERE id=1;')).cms,
+        cms,
+      );
+    } finally {
+      sql(`UPDATE public.dar_settings SET value=${literal(original)} WHERE id=1;`);
+    }
+  },
+);

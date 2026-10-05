@@ -1,3 +1,4 @@
+import type { SiteContent } from './site-content';
 import { isSupabaseEnabled } from './backend-config';
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { LoadingScreen } from './loading-screen';
@@ -22,6 +23,7 @@ export type Product = {
   updatedAt?: number;
 };
 export type Settings = {
+  cms?: SiteContent;
   brand: string;
   mode: 'preview' | 'live';
   heroTitle: string;
