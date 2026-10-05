@@ -375,6 +375,7 @@ try {
   await page.getByLabel('حالة الدفع').selectOption('paid');
   await page.getByRole('button', { name: 'حفظ التحديثات', exact: true }).click();
   await expect(page.locator('.alert.success')).toContainText('تم تحديث الطلب');
+  await page.reload();
   await expect(page.getByLabel('حالة الدفع')).toHaveValue('paid');
   await page.getByLabel('حالة الطلب').selectOption('cancelled');
   await page.getByRole('button', { name: 'حفظ التحديثات', exact: true }).click();
