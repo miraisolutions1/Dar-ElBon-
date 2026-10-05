@@ -387,7 +387,7 @@ export function SiteAdmin() {
         </Link>
       </div>
       <Alert>{error}</Alert>
-      <form onSubmit={save}>
+      <form className="site-admin" onSubmit={save}>
         <div className="admin-tabs">
           {tabs.map(([key, label]) => (
             <button
@@ -404,7 +404,9 @@ export function SiteAdmin() {
           <>
             <section className="panel">
               <h2>العناوين والأزرار الرئيسية</h2>
-              <TextTree value={content.home} path={['home']} update={update} />
+              <div className="cms-home-grid">
+                <TextTree value={content.home} path={['home']} update={update} />
+              </div>
             </section>
             <section className="panel">
               <h2>خطوات الطلب تحت الافتتاحية</h2>

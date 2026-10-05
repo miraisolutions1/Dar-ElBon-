@@ -63,6 +63,7 @@ test('all admin screens fit a small phone and navigation closes after selection'
     '/admin/products',
     '/admin/products/new',
     '/admin/content',
+    '/admin/site',
     '/admin/settings',
     '/admin/users',
     '/admin/audit',

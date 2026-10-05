@@ -1,0 +1,319 @@
+/* A readable, consistent scale for the management interface. */
+.admin-app,
+.login-page {
+  font-family: 'Noto Sans Arabic Variable', sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+.admin-app {
+  --muted: #73675d;
+  --line: #e8e2da;
+  background: #f6f5f2;
+}
+.admin-app h1,
+.admin-app h2,
+.admin-app h3,
+.login-page h1 {
+  font-family: inherit;
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+.admin-sidebar {
+  padding: 24px 16px 18px;
+  overflow-y: auto;
+}
+.admin-app .sidebar-brand .brand strong {
+  font-size: 16px;
+}
+.admin-app .sidebar-brand .brand small {
+  font-size: 10px;
+  letter-spacing: 0;
+}
+.admin-app .sidebar-caption {
+  font-size: 11px;
+  margin-top: 26px;
+}
+.admin-app .admin-sidebar nav a {
+  font-size: 13px;
+  font-weight: 500;
+  min-height: 46px;
+  padding: 10px 12px;
+  gap: 10px;
+}
+.admin-app .admin-sidebar nav a.active {
+  background: #ffd200;
+  color: #30251e;
+  font-weight: 650;
+}
+.admin-sidebar nav svg {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+}
+.admin-app .sidebar-bottom,
+.admin-app .sidebar-bottom button {
+  font-size: 12px;
+}
+.admin-topbar {
+  height: 76px;
+  padding: 12px 30px;
+  background: #fff;
+}
+.admin-app .admin-mode {
+  font-size: 12px;
+  color: #73675d;
+}
+.admin-app .admin-user strong {
+  font-size: 13px;
+}
+.admin-app .admin-user small {
+  font-size: 11px;
+}
+.admin-main {
+  padding: 28px 30px 56px;
+  max-width: 1440px;
+}
+.admin-app .admin-heading {
+  margin-bottom: 24px;
+}
+.admin-app .admin-heading h1 {
+  font-size: clamp(24px, 2.2vw, 30px);
+  font-weight: 700;
+}
+.admin-app .admin-heading p {
+  font-size: 13px;
+  color: var(--muted);
+}
+.admin-app .admin-heading .eyebrow {
+  font-size: 11px;
+}
+.admin-app .panel {
+  padding: 22px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 14px;
+}
+.admin-app .panel.no-padding {
+  padding: 0;
+}
+.admin-app .panel h2 {
+  font-size: 18px;
+  font-weight: 650;
+}
+.admin-app h3 {
+  font-size: 15px;
+  font-weight: 650;
+}
+.admin-app p {
+  line-height: 1.8;
+}
+.admin-app .tiny,
+.admin-app small,
+.admin-app .field small {
+  font-size: 12px;
+  line-height: 1.7;
+}
+.admin-app .field,
+.admin-app .check-label,
+.admin-app fieldset legend {
+  font-size: 13px;
+  font-weight: 550;
+}
+.admin-app .field {
+  gap: 8px;
+}
+.admin-app input,
+.admin-app select,
+.admin-app textarea,
+.login-page input {
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.6;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid #dcd4ca;
+  border-radius: 9px;
+}
+.admin-app textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+.admin-app input[type='checkbox'],
+.admin-app input[type='radio'] {
+  min-height: 0;
+  padding: 0;
+}
+.admin-app .btn,
+.admin-app .btn.small,
+.admin-app .admin-heading .btn,
+.admin-app .admin-tabs button {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 9px;
+}
+.admin-app .btn svg {
+  width: 18px;
+  height: 18px;
+}
+.admin-app .admin-tabs {
+  gap: 8px;
+  padding-bottom: 12px;
+}
+.admin-app .admin-tabs button {
+  white-space: nowrap;
+}
+.admin-app .admin-tabs button.selected {
+  background: #30251e;
+  color: #fff;
+}
+.admin-app .form-grid {
+  gap: 20px;
+}
+.admin-app .metric {
+  padding: 20px;
+}
+.admin-app .metric .row {
+  font-size: 13px;
+}
+.admin-app .metric > strong {
+  font-size: 30px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+.admin-app .metric > small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.admin-app th {
+  font-size: 12px;
+  font-weight: 650;
+  padding: 13px 16px;
+  color: #62574d;
+}
+.admin-app td {
+  font-size: 13px;
+  padding: 14px 16px;
+}
+.admin-app .product-cell strong {
+  font-size: 13px;
+}
+.admin-app .product-cell small,
+.admin-app .products-table .status {
+  font-size: 11px;
+}
+.admin-app .site-admin .cms-tree summary {
+  font-size: 15px;
+}
+.admin-app .site-admin .cms-tree details {
+  padding: 18px;
+  background: #fff;
+}
+.login-page h1 {
+  font-size: clamp(28px, 4vw, 36px);
+}
+.login-page .field {
+  font-size: 14px;
+}
+.login-page .btn {
+  font-size: 15px;
+  min-height: 48px;
+}
+@media (max-width: 900px) {
+  .admin-main {
+    padding: 24px 20px 40px;
+  }
+  .admin-topbar {
+    padding-inline: 20px;
+  }
+}
+@media (max-width: 600px) {
+  .admin-main {
+    padding: 20px 14px 36px;
+  }
+  .admin-topbar {
+    height: 72px;
+    padding: 10px 14px;
+    gap: 10px;
+  }
+  .admin-app .admin-mode {
+    font-size: 11px;
+  }
+  .admin-app .admin-user strong {
+    font-size: 12px;
+    max-width: 100px;
+  }
+  .admin-app .admin-user small {
+    font-size: 10px;
+  }
+  .admin-app .admin-heading {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .admin-app .admin-heading h1 {
+    font-size: 24px;
+  }
+  .admin-app .admin-heading p {
+    max-width: none;
+    font-size: 12px;
+  }
+  .admin-app .admin-heading .btn {
+    margin-top: 0;
+  }
+  .admin-app .panel {
+    padding: 16px;
+  }
+  .admin-app .metric {
+    padding: 14px;
+  }
+  .admin-app .metric .row {
+    font-size: 12px;
+  }
+  .admin-app .metric > strong {
+    font-size: 24px;
+  }
+  .admin-app .metric > small {
+    font-size: 11px;
+  }
+  .admin-app .admin-tabs button {
+    font-size: 12px;
+    padding: 10px 12px;
+  }
+  .admin-app .site-admin .cms-tree details {
+    padding: 14px;
+  }
+}
+.admin-app .admin-tabs {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.admin-app .site-admin .cms-home-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.admin-app .site-admin .cms-home-grid > * {
+  min-width: 0;
+}
+.admin-app .site-admin .cms-home-grid .image-upload img {
+  height: 180px;
+  object-fit: cover;
+}
+.admin-app .site-admin details {
+  margin-bottom: 14px;
+}
+.admin-app .site-admin summary {
+  font-size: 15px;
+  padding: 10px 0;
+  cursor: pointer;
+}
+@media (max-width: 600px) {
+  .admin-app .site-admin .cms-home-grid {
+    grid-template-columns: 1fr;
+  }
+}

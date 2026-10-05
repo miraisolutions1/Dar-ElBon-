@@ -42,6 +42,7 @@ import {
   AccountPage,
 } from './admin';
 import './premium-theme.css';
+import './admin-theme.css';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: boolean }> {
   state = { error: false };
