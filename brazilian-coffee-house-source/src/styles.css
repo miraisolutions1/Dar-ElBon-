@@ -16,7 +16,7 @@
 
 /* Give the hero the coffee and product photography from the BCH catalogue. */
 .hero-scene{isolation:isolate}
-.scene-photo{position:absolute;z-index:-1;width:94%;height:74%;left:3%;top:7%;object-fit:cover;object-position:center;border-radius:50%;opacity:.42;filter:brightness(.58) saturate(.78);mask-image:radial-gradient(ellipse,#000 36%,transparent 76%)}
+.hero-scene:after{content:"";position:absolute;z-index:-1;width:94%;height:74%;left:3%;top:7%;border-radius:50%;background-image:linear-gradient(rgba(20,44,34,.48),rgba(20,44,34,.48)),url("../images/hero.webp");background-size:cover;background-position:center;opacity:.76;mask-image:radial-gradient(ellipse,#000 36%,transparent 76%);pointer-events:none}
 .scene-glow{z-index:-1;width:86%;height:82%;left:7%;top:4%;background:radial-gradient(ellipse,rgba(217,175,103,.19),rgba(217,175,103,.07) 42%,rgba(20,44,34,0) 72%);filter:blur(16px)}
 .hero-pack{width:39%;height:84%;filter:drop-shadow(0 34px 24px rgba(0,0,0,.55))}
 .pack-back{height:91%;width:37%;left:34%;top:0}
@@ -25,5 +25,5 @@
 .hero-scene:before{z-index:0;bottom:12%}
 .hero-pack{z-index:1}
 .scene-beans,.scene-caption,.scene-index{z-index:2}
-@media(max-width:900px) and (min-width:651px){.hero-pack{width:43%}.pack-back{width:41%}.pack-left{left:2%;width:42%}.pack-right{right:2%;width:42%}.scene-photo{width:100%;left:0}}
-@media(max-width:650px){.scene-photo{width:100%;height:76%;left:0;top:5%;opacity:.34}.hero-pack{width:36%;height:76%}.pack-back{width:34%;height:84%;top:0}.pack-left{left:9%;height:69%;top:12%}.pack-right{right:8%;height:70%;top:10%}}
+@media(max-width:900px) and (min-width:651px){.hero-pack{width:43%}.pack-back{width:41%}.pack-left{left:2%;width:42%}.pack-right{right:2%;width:42%}.hero-scene:after{width:100%;left:0}}
+@media(max-width:650px){.hero-scene:after{width:100%;height:76%;left:0;top:5%;opacity:.6}.hero-pack{width:36%;height:76%}.pack-back{width:34%;height:84%;top:0}.pack-left{left:9%;height:69%;top:12%}.pack-right{right:8%;height:70%;top:10%}}
