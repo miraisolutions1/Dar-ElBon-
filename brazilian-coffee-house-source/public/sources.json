@@ -1,0 +1,13 @@
+{
+  "official": "https://www.braziliancoffeehouse.com/",
+  "story": "https://www.braziliancoffeehouse.com/AboutUs",
+  "branches": "https://www.braziliancoffeehouse.com/Locations",
+  "contact": "https://www.braziliancoffeehouse.com/ContactUs",
+  "catalog": [
+    "https://www.braziliancoffeehouse.com/Products/Index/1",
+    "https://www.braziliancoffeehouse.com/Products/Index/8",
+    "https://www.braziliancoffeehouse.com/Products/Index/3",
+    "https://www.braziliancoffeehouse.com/Products/Index/9"
+  ],
+  "notes": "Names, images and IDs restored from the published independent catalog. Verify current price, weight, branch details and availability with the official brand."
+}

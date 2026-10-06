@@ -1,0 +1,542 @@
+[
+  {
+    "id": "3",
+    "name": "قهوة تركية فاتح",
+    "category": "تركية",
+    "image": "./images/product-3.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/3",
+    "weight": null,
+    "roast": "فاتح",
+    "price": null
+  },
+  {
+    "id": "4",
+    "name": "قهوة تركية وسط",
+    "category": "تركية",
+    "image": "./images/product-4.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/4",
+    "weight": null,
+    "roast": "وسط",
+    "price": null
+  },
+  {
+    "id": "5",
+    "name": "قهوة تركية غامق",
+    "category": "تركية",
+    "image": "./images/product-5.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/5",
+    "weight": null,
+    "roast": "غامق",
+    "price": null
+  },
+  {
+    "id": "16",
+    "name": "قهوة تركية بنكهة الفانيلا",
+    "category": "تركية",
+    "image": "./images/product-16.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/16",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "17",
+    "name": "قهوة تركية بنكهة البندق والفانيلا",
+    "category": "تركية",
+    "image": "./images/product-17.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/17",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "19",
+    "name": "قهوة تركية بنكهة الكراميل",
+    "category": "تركية",
+    "image": "./images/product-19.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/19",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "20",
+    "name": "قهوة تركية بنكهة المكاديميا",
+    "category": "تركية",
+    "image": "./images/product-20.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/20",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "21",
+    "name": "قهوة تركية بنكهة الشوكولاتة",
+    "category": "تركية",
+    "image": "./images/product-21.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/21",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "23",
+    "name": "قهوة تركية بنكهة البندق",
+    "category": "تركية",
+    "image": "./images/product-23.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/23",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "34",
+    "name": "قهوة فرنسية",
+    "category": "تركية",
+    "image": "./images/product-34.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/34",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "35",
+    "name": "قهوة فرنسية بالبندق",
+    "category": "تركية",
+    "image": "./images/product-35.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/35",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "88",
+    "name": "قهوة تركية فاتح",
+    "category": "تركية",
+    "image": "./images/product-88.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/88",
+    "weight": null,
+    "roast": "فاتح",
+    "price": null
+  },
+  {
+    "id": "89",
+    "name": "قهوة تركية وسط",
+    "category": "تركية",
+    "image": "./images/product-89.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/89",
+    "weight": null,
+    "roast": "وسط",
+    "price": null
+  },
+  {
+    "id": "90",
+    "name": "قهوة تركية غامق",
+    "category": "تركية",
+    "image": "./images/product-90.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/90",
+    "weight": null,
+    "roast": "غامق",
+    "price": null
+  },
+  {
+    "id": "94",
+    "name": "قهوة تركية بنكهة المستكة",
+    "category": "تركية",
+    "image": "./images/product-94.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/94",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "96",
+    "name": "قهوة تركية بدون كافيين",
+    "category": "تركية",
+    "image": "./images/product-96.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/96",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "105",
+    "name": "قهوة تركية ساشيت",
+    "category": "تركية",
+    "image": "./images/product-105.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/105",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "106",
+    "name": "قهوة عثمانية",
+    "category": "تركية",
+    "image": "./images/product-106.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/106",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "120",
+    "name": "قهوة تركية بالخلطة الأردنية  \" كيس\"",
+    "category": "تركية",
+    "image": "./images/product-120.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/120",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "121",
+    "name": "قهوة تركية بخلطة خاصة «وسط مع هيل»",
+    "category": "تركية",
+    "image": "./images/product-121.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/121",
+    "weight": 250,
+    "roast": "وسط",
+    "price": null
+  },
+  {
+    "id": "122",
+    "name": "قهوة فرنسية بنكهة المكاديميا",
+    "category": "تركية",
+    "image": "./images/product-122.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/122",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "123",
+    "name": "قهوة تركية بالخلطة الأردنية - مغلفات",
+    "category": "تركية",
+    "image": "./images/product-123.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/123",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "135",
+    "name": "قهوة تركية بدون هيل",
+    "category": "تركية",
+    "image": "./images/product-135.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/135",
+    "weight": 250,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "136",
+    "name": "قهوة تركية بدون كافيين",
+    "category": "تركية",
+    "image": "./images/product-136.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/136",
+    "weight": 250,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "137",
+    "name": "قهوة إثيوبية وسط مع هيل",
+    "category": "تركية",
+    "image": "./images/product-137.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/137",
+    "weight": null,
+    "roast": "وسط",
+    "price": null
+  },
+  {
+    "id": "138",
+    "name": "قهوة كولومبية وسط مع هيل",
+    "category": "تركية",
+    "image": "./images/product-138.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/138",
+    "weight": null,
+    "roast": "وسط",
+    "price": null
+  },
+  {
+    "id": "139",
+    "name": "قهوة كينية وسط مع هيل",
+    "category": "تركية",
+    "image": "./images/product-139.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/139",
+    "weight": null,
+    "roast": "وسط",
+    "price": null
+  },
+  {
+    "id": "140",
+    "name": "قهوة هندية وسط مع هيل",
+    "category": "تركية",
+    "image": "./images/product-140.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/140",
+    "weight": null,
+    "roast": "وسط",
+    "price": null
+  },
+  {
+    "id": "141",
+    "name": "قهوة بيرو وسط مع هيل",
+    "category": "تركية",
+    "image": "./images/product-141.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/141",
+    "weight": null,
+    "roast": "وسط",
+    "price": null
+  },
+  {
+    "id": "148",
+    "name": "قهوة تركية بالخلطة الأردنية غامق",
+    "category": "تركية",
+    "image": "./images/product-148.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/148",
+    "weight": 250,
+    "roast": "غامق",
+    "price": null
+  },
+  {
+    "id": "149",
+    "name": "قهوة تركية بالخلطة الأردنية فاتح",
+    "category": "تركية",
+    "image": "./images/product-149.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/149",
+    "weight": 250,
+    "roast": "فاتح",
+    "price": null
+  },
+  {
+    "id": "7",
+    "name": "قهوة عربية",
+    "category": "عربية",
+    "image": "./images/product-7.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/7",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "8",
+    "name": "قهوة سعودية",
+    "category": "عربية",
+    "image": "./images/product-8.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/8",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "110",
+    "name": "قهوة عربية (سريعة التحضير)",
+    "category": "عربية",
+    "image": "./images/product-110.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/110",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "111",
+    "name": "قهوة عربية مغلف (سريعة التحضير)",
+    "category": "عربية",
+    "image": "./images/product-111.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/111",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "112",
+    "name": "قهوة سعودية (سريعة التحضير)10 مغلف",
+    "category": "عربية",
+    "image": "./images/product-112.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/112",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "113",
+    "name": "قهوة سعودية مغلف (سريعة التحضير)",
+    "category": "عربية",
+    "image": "./images/product-113.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/113",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "6",
+    "name": "قهوة فلتر كولومبية",
+    "category": "فلتر",
+    "image": "./images/product-6.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/6",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "9",
+    "name": "قهوة فلتر كينية",
+    "category": "فلتر",
+    "image": "./images/product-9.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/9",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "11",
+    "name": "قهوة الفلتر الأصلية",
+    "category": "فلتر",
+    "image": "./images/product-11.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/11",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "26",
+    "name": "قهوة فلتر بنكهة الفانيلا",
+    "category": "فلتر",
+    "image": "./images/product-26.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/26",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "27",
+    "name": "قهوة فلتر بنكهة البندق والفانيلا",
+    "category": "فلتر",
+    "image": "./images/product-27.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/27",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "29",
+    "name": "قهوة فلتر بنكهة الكراميل",
+    "category": "فلتر",
+    "image": "./images/product-29.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/29",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "30",
+    "name": "قهوة فلتر بنكهة المكاديميا",
+    "category": "فلتر",
+    "image": "./images/product-30.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/30",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "31",
+    "name": "قهوة فلتر بنكهة الشوكولاتة",
+    "category": "فلتر",
+    "image": "./images/product-31.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/31",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "33",
+    "name": "قهوة فلتر بنكهة البندق",
+    "category": "فلتر",
+    "image": "./images/product-33.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/33",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "95",
+    "name": "قهوة فلتر بنكهة المستكة",
+    "category": "فلتر",
+    "image": "./images/product-95.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/95",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "98",
+    "name": "قهوة فلتر أثيوبية",
+    "category": "فلتر",
+    "image": "./images/product-98.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/98",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "99",
+    "name": "قهوة فلتر عضوية",
+    "category": "فلتر",
+    "image": "./images/product-99.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/99",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "100",
+    "name": "قهوة فلتر بيرو",
+    "category": "فلتر",
+    "image": "./images/product-100.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/100",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "150",
+    "name": "قهوة فلتر الأصلية \"كيس\"",
+    "category": "فلتر",
+    "image": "./images/product-150.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/150",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "13",
+    "name": "قهوة إسبريسو بدون كافيين",
+    "category": "إسبريسو",
+    "image": "./images/product-13.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/13",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "109",
+    "name": "قهوة إسبريسو الأصلية",
+    "category": "إسبريسو",
+    "image": "./images/product-109.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/109",
+    "weight": null,
+    "roast": null,
+    "price": null
+  },
+  {
+    "id": "156",
+    "name": "قهوة إسبريسو غامق",
+    "category": "إسبريسو",
+    "image": "./images/product-156.webp",
+    "source": "https://www.braziliancoffeehouse.com/Products/Details/156",
+    "weight": null,
+    "roast": "غامق",
+    "price": null
+  }
+]
